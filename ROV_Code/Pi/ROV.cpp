@@ -649,6 +649,9 @@ int main(int argc, char* argv[])
 
 	//call this function when SIGINT is received (Ctrl+C, kind of a force quit)
 	std::signal(SIGINT, exitFxn);
+	
+	//ALSO call this function when SIGTERM is received (system shutdown)
+	std::signal(SIGTERM, exitFxn);
 
 	while ((err = sbus.read()) != SBUS_FAIL) {
 		if (err == SBUS_ERR_DESYNC) {
