@@ -18,12 +18,16 @@ void MainLoop(){
     //printUsage();
     //printPrompt();
 
+    setSensorPWM(25);
+    setSensorDirection(1);
+    
     //Main program loop
     while(1) {
 
         //testPlots();//Test vectors
-        reportCurrentSense();
-        reportDistanceSense();
+        //reportCurrentSense();
+        //reportDistanceSense();
+	reportDistanceCurrentSense();
 
         //Sensor Task
 

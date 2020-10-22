@@ -26,3 +26,4 @@ void testSensor(uint8_t dutyCycle, uint8_t direction);
 void setSensorDirection(uint8_t direction);
 void reportCurrentSense();
 void reportDistanceSense();
+void reportDistanceCurrentSense();

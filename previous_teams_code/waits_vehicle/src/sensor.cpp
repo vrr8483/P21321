@@ -56,7 +56,7 @@ void initSensor()
 /**
  * Reports the current sense pin to serial OUTPUT
  * Uses format:
- * i<sample>,<time>
+ * curr:\t<sample>
  */
 void reportCurrentSense() {
     uint32_t currentTime = millis();
@@ -65,14 +65,14 @@ void reportCurrentSense() {
         //Sample the current and report
         currentLastSampled = currentTime;//set time to current time
         uint32_t currentSample = analogRead(SENSOR_FORCE_ANALOG_PIN);
-        Serial_Printf("i%lu,%lu\n\r", currentSample, currentTime);
+        Serial_Printf("curr:\t%lu\n\r", currentSample);
     }
 }
 
 /**
  * Reports the distance sense pin to serial OUTPUT
  * Uses format:
- * d<sample>,<time>
+ * dist:\t<time>\t<sample>
  */
 void reportDistanceSense() {
     uint32_t currentTime = millis();
@@ -81,9 +81,28 @@ void reportDistanceSense() {
         //Sample the current and report
         distanceLastSampled = currentTime;//set time to current time
         uint32_t distanceSample = analogRead(SENSOR_DISTANCE_ANALOG_PIN);
-        Serial_Printf("d%lu,%lu\n\r", distanceSample, currentTime);
+        Serial_Printf("dist\t%lu\t%lu\n\r", currentTime, distanceSample);
     }
 }
+
+/**
+ * Reports the distance and current as in reportDistanceSense and reportCurrentSense
+ * Uses format:
+ * <time>\t<distance>\t<current>
+ */
+void reportDistanceCurrentSense() {
+    uint32_t currentTime = millis();
+    //only report every sample period
+    if( currentTime > distanceLastSampled + DISTANCE_SENSE_SAMPLING_RATE){
+        //Sample the current and report
+        distanceLastSampled = currentTime;//set time to current time
+        uint32_t distanceSample = analogRead(SENSOR_DISTANCE_ANALOG_PIN);
+        uint32_t currentSample = analogRead(SENSOR_FORCE_ANALOG_PIN);
+        Serial_Printf("%lu\t%lu\t%lu\n\r", currentTime, distanceSample, currentSample);
+    }
+}
+
+
 
 /**
  * @param direction - 0 for forward, else for reverse
