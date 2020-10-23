@@ -18,10 +18,11 @@ void MainLoop(){
     //printUsage();
     //printPrompt();
 
-    setSensorPWM(25);
+    setSensorPWM(0);
     setSensorDirection(1);
     
     //Main program loop
+    int i = 0;
     while(1) {
 
         //testPlots();//Test vectors
@@ -73,4 +74,6 @@ void MainLoop(){
 
         }
     }
+    i++;
+    setSensorPWM(i / 100);
 }
