@@ -132,6 +132,19 @@ void setSensorPWM(uint8_t dutyCycle)
     analogWrite(SENSOR_PWM_PIN, sensorPWMValue);
 }
 
+void setDrillPWM(uint8_t dutyCycle)
+{
+    //Check for out of bounds, something is wrong
+    if(dutyCycle > 100){
+        dutyCycle = 0;//Just don't set it
+    }
+    //Need to calculate what to write to the pin, 255 is 100%, 127 is 50%, etc...
+    sensorPWMValue = ((dutyCycle / 100.0) * MAX_ANALOG_WRITE);
+    //Serial_Printf("Setting duty cycle to %d\n\r", sensorPWMValue);
+
+    analogWrite(DRILL_PWM_PIN, sensorPWMValue);
+}
+
 /**
  * Sample the sensor, taking the derivative of the distance and force
  * @return bool * - Boolean array [pass, fail], return of [0,0] means still sensing

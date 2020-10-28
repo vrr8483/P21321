@@ -18,10 +18,13 @@
 #define CURRENT_SENSE_SAMPLING_RATE (100)
 #define DISTANCE_SENSE_SAMPLING_RATE (100)
 
+#define DRILL_PWM_PIN (2)
+
 
 //Function declarations
 void initSensor();
 void setSensorPWM(uint8_t dutyCycle);
+void setDrillPWM(uint8_t dutyCycle);
 void testSensor(uint8_t dutyCycle, uint8_t direction);
 void setSensorDirection(uint8_t direction);
 void reportCurrentSense();
