@@ -142,7 +142,7 @@ void handleCommand(char * str)
     }
     //Set actuator direction
     if(command[0] == 'D' || command[0] =='d'){
-        //Serial_Printf("\r\nSetting actuator direction to %d", params[0]);
+        Serial_Printf("\r\nSetting actuator direction to %d\n", params[0]);
         setSensorDirection(params[0]);
     }
     //Stop wheels command
