@@ -3,7 +3,7 @@
 //Pin Mappings
 #define SENSOR_FORCE_ANALOG_PIN (A7)
 #define SENSOR_DISTANCE_ANALOG_PIN (A6)
-#define SENSOR_PWM_PIN (6)
+#define SENSOR_PWM_PIN (4)
 #define ACTUATOR_INA (32)
 #define ACTUATOR_INB (33)
 #define ACTUATOR_ENA (34)
