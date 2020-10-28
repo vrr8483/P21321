@@ -18,8 +18,10 @@ void MainLoop(){
     //printUsage();
     //printPrompt();
 
-    setSensorPWM(25);
+    setSensorPWM(0);
     setSensorDirection(1);
+    
+    setDrillPWM(100);
     
     //Main program loop
     while(1) {
