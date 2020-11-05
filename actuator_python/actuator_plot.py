@@ -20,6 +20,13 @@ for p in ports:
         arduino_port = p.device
         break
 
+print("No port here says its an arduino outright. ill find one that says generic?")
+for p in ports:
+    if "Generic" in p.description:
+        print("Found Arduino at: " + p.device)
+        arduino_port = p.device
+        break
+
 if arduino_port == "":
     print("Could not find Arduino. Exiting.")
     quit()
