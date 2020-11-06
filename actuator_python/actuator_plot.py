@@ -13,14 +13,14 @@ arduino_port = ""
 print("Serial ports:")
 for p in ports:
     print(p)
-    if "Arduino" in p.description:
+    if "arduino" in p.description.lower():
         print("Found Arduino at: " + p.device)
         arduino_port = p.device
         break
 
 print("No port here says its an arduino outright. ill find one that says generic?")
 for p in ports:
-    if "Generic" in p.description:
+    if "generic" in p.description.lower():
         print("Found Arduino at: " + p.device)
         arduino_port = p.device
         break
