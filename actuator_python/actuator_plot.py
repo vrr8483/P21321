@@ -1,5 +1,4 @@
 import sys
-
 import os
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -55,11 +54,15 @@ dist_vals = []  # distance values
 curr_vals = []  # current values
 
 # fp = open("test_data.txt", 'r')
-# TODO: Allow user to name test data
-now = datetime.now()
+
+if len(sys.argv) > 1:
+    suffix = sys.argv[1]
+else:
+    now = datetime.now()
+    suffix = now.strftime("%m_%d_%Y__%H_%M_%S")
+
 slash = os.path.sep
-datetime_str = now.strftime("%m_%d_%Y__%H_%M_%S")
-csv_file = open("Data{0}test_{1}.csv".format(slash, datetime_str), 'w')
+csv_file = open("Data{0}test_{1}.csv".format(slash, suffix), 'w')
 
 
 # This function is called periodically from FuncAnimation
