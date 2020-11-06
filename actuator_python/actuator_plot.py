@@ -18,7 +18,7 @@ for p in ports:
         arduino_port = p.device
         break
 
-print("No port here says its an arduino outright. ill find one that says generic?")
+print("No port here says its an arduino outright. I'll look for one that says 'generic'.")
 for p in ports:
     if "generic" in p.description.lower():
         print("Found Arduino at: " + p.device)
@@ -150,7 +150,7 @@ def commandLine():
             ser.write(s.encode())
 
 
-# Set up plot to call animate() function periodically
+# Set up plot to call animate() function periodically (interval is in milliseconds)
 ani = animation.FuncAnimation(fig, animate, fargs=(x_data, dist_vals), interval=80)
 plt.ion()  # Interactive mode, lets plt.show() be non-blocking
 plt.show()
