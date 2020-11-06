@@ -1,11 +1,10 @@
 import sys
 
+import os
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import serial.tools.list_ports
 from datetime import datetime
-
-
 
 # initialize serial port
 ser = serial.Serial()
@@ -58,8 +57,9 @@ curr_vals = []  # current values
 # fp = open("test_data.txt", 'r')
 # TODO: Allow user to name test data
 now = datetime.now()
+slash = os.path.sep
 datetime_str = now.strftime("%m_%d_%Y__%H_%M_%S")
-csv_file = open("test_{0}.csv".format(datetime_str), 'w')
+csv_file = open("Data{0}test_{1}.csv".format(slash, datetime_str), 'w')
 
 
 # This function is called periodically from FuncAnimation
