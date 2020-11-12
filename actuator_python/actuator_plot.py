@@ -82,8 +82,8 @@ curr_vals = []  # current values
 
 # fp = open("test_data.txt", 'r')
 
-if len(sys.argv) > 1:
-    suffix = sys.argv[1]
+if test_name is not None:
+    suffix = test_name
 else:
     now = datetime.now()
     suffix = now.strftime("%m_%d_%Y__%H_%M_%S")
