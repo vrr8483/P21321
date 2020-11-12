@@ -4,6 +4,20 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import serial.tools.list_ports
 from datetime import datetime
+import argparse
+
+parser = argparse.ArgumentParser(
+    description="Runs the actuator CLI using the connected Arduino. Requires matplotlib and pyserial."
+)
+
+parser.add_argument("-p", "--port", help="Port to find Arduino connected to. If not specified, tries to find Arduino "
+                                         "automatically.")
+parser.add_argument("-n", "--name", help="Name for test, written in data filename. If not specified, uses current "
+                                         "datetime.")
+
+parsed_args = parser.parse_args(sys.argv[1:])
+port_to_look_for = parsed_args.port
+test_name = parsed_args.name
 
 # initialize serial port
 ser = serial.Serial()
@@ -13,17 +27,30 @@ arduino_port = ""
 print("Serial ports:")
 for p in ports:
     print(p)
-    if "arduino" in p.description.lower():
-        print("Found Arduino at: " + p.device)
-        arduino_port = p.device
-        break
 
-print("No port here says its an arduino outright. I'll look for one that says 'generic'.")
-for p in ports:
-    if "generic" in p.description.lower():
-        print("Found Arduino at: " + p.device)
-        arduino_port = p.device
-        break
+if port_to_look_for is not None:
+    print("Looking for ports matching '{0}'...".format(port_to_look_for))
+    for p in ports:
+        if port_to_look_for.lower() in p.description.lower() or port_to_look_for.lower() in p.device.lower():
+            print("Found Arduino at: " + p.device)
+            arduino_port = p.device
+            break
+
+if arduino_port == "":
+    print("Looking for ports with 'arduino' in the name...")
+    for p in ports:
+        if "arduino" in p.description.lower():
+            print("Found Arduino at: " + p.device)
+            arduino_port = p.device
+            break
+
+if arduino_port == "":
+    print("No port found. Looking for one that says 'generic'...")
+    for p in ports:
+        if "generic" in p.description.lower():
+            print("Found Arduino at: " + p.device)
+            arduino_port = p.device
+            break
 
 if arduino_port == "":
     print("Could not find Arduino. Exiting.")
