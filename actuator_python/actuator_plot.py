@@ -90,6 +90,7 @@ else:
 
 slash = os.path.sep
 csv_file = open("Data{0}test_{1}.csv".format(slash, suffix), 'w')
+csv_file.write("Time (ms), Dist, CurrSense\n")
 
 
 # This function is called periodically from FuncAnimation
