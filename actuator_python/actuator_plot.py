@@ -97,30 +97,33 @@ csv_file.write("Time (ms), Dist, CurrSense\n")
 def animate(i, xs, dists):
     # print("animate called: ", i)
     # Acquire and parse data from serial port
-    line = ser.readline().strip()  # ascii
-    # line = fp.readline().strip()
-    # print(line)
-    line_as_list = line.split(b'\t')
-    # print(line_as_list)
+    lines = ser.readlines()
 
-    if len(line_as_list) != 3:  # Got only part of a line, skip
-        return
+    for line in lines:
+        line = line.strip()  # ascii
+        # line = fp.readline().strip()
+        # print(line)
+        line_as_list = line.split(b'\t')
+        # print(line_as_list)
 
-    try:
-        i = int(line_as_list[0])
-        dist_float = float(line_as_list[1])
-        curr_float = float(line_as_list[2])
-    except ValueError as ve:
-        print("Value error occurred, skipping some data:")
-        print(str(ve))
-        return
+        if len(line_as_list) != 3:  # Got only part of a line, skip
+            return
 
-    # Add x and y to lists
-    xs.append(i)
-    dists.append(dist_float)
-    curr_vals.append(curr_float)
+        try:
+            i = int(line_as_list[0])
+            dist_float = float(line_as_list[1])
+            curr_float = float(line_as_list[2])
+        except ValueError as ve:
+            print("Value error occurred, skipping some data:")
+            print(str(ve))
+            return
 
-    csv_file.write(str(i) + ", " + str(dist_float) + ", " + str(curr_float) + "\n")
+        # Add x and y to lists
+        xs.append(i)
+        dists.append(dist_float)
+        curr_vals.append(curr_float)
+
+        csv_file.write(str(i) + ", " + str(dist_float) + ", " + str(curr_float) + "\n")
 
     # Limit x and y lists to 20 items
     # xs = xs[-20:]
@@ -179,7 +182,7 @@ def commandLine():
 
 
 # Set up plot to call animate() function periodically (interval is in milliseconds)
-ani = animation.FuncAnimation(fig, animate, fargs=(x_data, dist_vals), interval=80)
+ani = animation.FuncAnimation(fig, animate, fargs=(x_data, dist_vals), interval=100)
 plt.ion()  # Interactive mode, lets plt.show() be non-blocking
 plt.show()
 # print(plt.isinteractive())
