@@ -95,8 +95,15 @@ csv_file.write("Time (ms), Dist, CurrSense\n")
 
 # This function is called periodically from FuncAnimation
 def animate(i, xs, dists):
-    # print("animate called: ", i)
-    # Acquire and parse data from serial port
+    # print("animate called: ", i) Acquire and parse data from serial port
+
+    # Read more than one line to catch up with the arduino. readlines() only allows a single argument limiting the
+    # number of bytes it will read before returning a string array with the lines. This should catch around 4 lines (
+    # assuming < 15 chars each). if this is too slow, double this limit. if the limit is too high, this function will
+    # block for a long time before allowing the animate function to continue. if the limit is not provided,
+    # the function will block indefinitely as it just sucks up data from the arduino, which sends lines over
+    # constantly. 
+
     lines = ser.readlines(64)  # max 64 characters
 
     for line in lines:
