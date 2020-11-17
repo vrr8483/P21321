@@ -97,7 +97,7 @@ csv_file.write("Time (ms), Dist, CurrSense\n")
 def animate(i, xs, dists):
     # print("animate called: ", i)
     # Acquire and parse data from serial port
-    lines = ser.readlines()
+    lines = ser.readlines(64)  # max 64 characters
 
     for line in lines:
         line = line.strip()  # ascii
