@@ -170,6 +170,8 @@ def commandLine():
     while True:
         sys.stdout.flush()
         line = input('>>')
+        if len(line) == 0:
+            pass
         # Check if this is the local plot switch command, or an external command to the Microcontroller
         if line[0].lower() == 'p':
             pass
