@@ -1,0 +1,4 @@
+1.385 inches
+1.491 inches (test 2)
+test 4 was run at 30 pwm
+
