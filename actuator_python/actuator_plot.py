@@ -153,15 +153,10 @@ def animate(i, xs, dists):
 def printUsage():
     print("Welcome to the MSD Ice Safety Sensor vehicle debug terminal!")
     print("Available Commands:")
-    # print("\t(P | p) [tag] - Switch the plot to the given data tag.")
-    # print("\t(R | r) [tag] - Toggle recording to CSV, defaults on.")
-    # print("\t(D | d) - Enter debug mode, defaults to off.")
-    # print("\t(X | x) - Exit Debug mode, continue as normal." )
-    # print("\t(S | s) [leftSpeed rightSpeed] - Set the speed of each motor.")
-    # print("\t(P | p) [leftPWM rightPWM] - Set the PWM for each motor.")
     print("\t(A | a) [pwm] - Set the PWM value of the actuator.")
-    print("\t(D | d) [dir] - Set direction of actuator, 0 forward else reverse.")
-    print("\t(X | x) - Stop both wheels and actuator (PWM and Speed are set to 0).")
+    print("\t(R | r) [pwm] - Set the PWM value of the drill.")
+    print("\t(D | d) [dir] - Set direction of actuator and drill, 0 forward else reverse.")
+    print("\t(X | x) - Stop both drill and actuator.")
     print("\t(Q | q) - Quit Program.")
 
 
@@ -172,22 +167,11 @@ def commandLine():
         line = input('>>')
         if len(line) == 0:
             pass
-        # Check if this is the local plot switch command, or an external command to the Microcontroller
-        if line[0].lower() == 'p':
-            pass
-        elif line[0].lower() == 'a':
-            s = ('q' + line + '\n\r')
-            # print(s)
-            ser.write(s.encode())
-        elif line[0].lower() == 'q':
-            break
-        elif line[0].lower() == 'r':
-            pass
-        else:
-            # External command, write it to serial
-            s = ('q' + line + '\n\r')
-            # print(s)
-            ser.write(s.encode())
+
+        # External command, write it to serial
+        s = ('q' + line + '\n\r')
+        # print(s)
+        ser.write(s.encode())
 
 
 # Set up plot to call animate() function periodically (interval is in milliseconds)

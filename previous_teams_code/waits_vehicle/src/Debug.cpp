@@ -116,39 +116,27 @@ void handleCommand(char * str)
             params[k] = strtol(tokens[k+1], &ptr, 10);
         }  
     }
-    //Debug command
-    /*
-    if(command[0] == 'D' || command[0] == 'd'){
-        Serial_Printf("\r\nEntering debug mode!\r\n");
-    }
-    //Exit debug command
-    if(command[0] == 'X' || command[0] == 'x'){
-        Serial_Printf("\r\nExiting debug mode!\r\n");
-    }
-    */
-    //Set Speed command
-    if(command[0] == 'S' || command[0] == 's'){
-        //Serial_Printf("\r\nSetting motor speed to Left , Right: %d , %d!\r\n", params[0], params[1]);
-    }
-    //Set PWM command
-    if(command[0] == 'P' || command[0] == 'p'){
-        //Serial_Printf("\r\nSetting PWM to LeftTop , LeftBot , RightTop, RightBot: %d , %d , %d , %d!\r\n",
-          //  params[0], params[1], params[2], params[3] );
-    }
+    
     //Set actuator PWM
     if(command[0] == 'A' || command[0] =='a'){
         //Serial_Printf("\r\nSetting actuator PWM to %d", params[0]);
         setSensorPWM(params[0]);
+    }
+    //Set drill PWM
+    if(command[0] == 'R' || command[0] =='r'){
+        //Serial_Printf("\r\nSetting actuator PWM to %d", params[0]);
+        setDrillPWM(params[0]);
     }
     //Set actuator direction
     if(command[0] == 'D' || command[0] =='d'){
         Serial_Printf("\r\nSetting actuator direction to %d\n", params[0]);
         setSensorDirection(params[0]);
     }
-    //Stop wheels command
+    //Stop command
     if(command[0] == 'X' || command[0] == 'x'){
         //Serial_Printf("\r\nStopping all motors and actuator!\r\n");
         setSensorPWM(0);
+        setDrillPWM(0);
     }
 
 }
