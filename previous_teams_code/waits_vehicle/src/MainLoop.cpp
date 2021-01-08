@@ -21,7 +21,7 @@ void MainLoop(){
     setSensorPWM(0);
     setSensorDirection(1);
     
-    setDrillPWM(100);
+    setDrillPWM(0);
     
     //Main program loop
     while(1) {
