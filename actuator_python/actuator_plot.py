@@ -168,6 +168,10 @@ def commandLine():
         if len(line) == 0:
             pass
 
+        # quit command
+        if line[0].lower() == 'q':
+            break
+        
         # External command, write it to serial
         s = ('q' + line + '\n\r')
         # print(s)
