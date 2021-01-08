@@ -1,2 +1,5 @@
 30 PWM: 1.7055 in.
-
+First garage ice square: 2.098 in., act. PWM 30, white ice in middle
+Second: 0.5735 in., act 30 PWM, fridge ice (white but relatively sturdy)
+Third: 0.9625 in, 40 PWM, layered black and white ice, broke very early
+Fourth: 0.704 in, 40 PWM, black ice, broke early again
