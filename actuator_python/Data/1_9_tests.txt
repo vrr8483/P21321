@@ -1,0 +1,5 @@
+first test: kiddy pool, 40 PWM, 6.9485 in (or 2.43 inches according to the hook), i think the drill bottomed out with ice left to go, or otherwise hit the plastic under the ice.
+second: kiddy pool again, 30 PWM, 2.4065 in, we hit water
+third: same pool, 2.639 in, 20 PWM
+fourth: "  ", 50 PWM, drill bent and lifted the whole test fixture. oops.
+
