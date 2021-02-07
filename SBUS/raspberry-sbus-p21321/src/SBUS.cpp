@@ -22,7 +22,7 @@ sbus_err_t SBUS::install(const char *path, bool blocking, uint8_t timeout)
 
 uint16_t SBUS::channel(int num) const
 {
-    if (num >= 0 & num < 16)
+    if ((num >= 0) & (num < 16))
         return channel(num);
     else
         return 0;
@@ -69,7 +69,15 @@ sbus_err_t SBUS::read()
                     else
                     {
                         hadDesync = true;
+			/*for (int j = 0; j < SBUS_PACKET_SIZE; ++j){
+				printf("%x ", _packet[j]);
+			}*/
+			//printf("\n");
                     }
+			/*for (int j = 0; j < SBUS_PACKET_SIZE; ++j){
+				printf("%x ", _packet[j]);
+			}
+			printf("\n");*/
                     _state = State::WAIT_FOR_HEADER;
                     _packetPos = 0;
                 }
@@ -105,7 +113,7 @@ sbus_err_t SBUS::write(sbus_packet_t packet)
 
 bool SBUS::verifyPacket()
 {
-    return (_packet[0] == SBUS_HEADER) && (_packet[SBUS_PACKET_SIZE - 1] == SBUS_END);
+    return (_packet[0] == SBUS_HEADER) && /*(_packet[SBUS_PACKET_SIZE - 2] == SBUS_SECOND_TO_LAST) &&*/ (_packet[SBUS_PACKET_SIZE - 1] == SBUS_END);
 }
 
 void SBUS::decodePacket()
@@ -114,6 +122,7 @@ void SBUS::decodePacket()
     sbus_err_t ret = sbus_decode(_packet, _channels, &opt);
     if (ret == SBUS_OK && _packetCb != nullptr)
     {
+	//printf("Decoded fine.\n");
         sbus_packet_t packet = {
                 _channels,
                 (bool) (opt & SBUS_OPT_C17),
@@ -122,5 +131,7 @@ void SBUS::decodePacket()
                 (bool) (opt & SBUS_OPT_FL)
         };
         _packetCb(packet);
+    } else {
+	//printf("Decode error: %d\n", ret);
     }
 }

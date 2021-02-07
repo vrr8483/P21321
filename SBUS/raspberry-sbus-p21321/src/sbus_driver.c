@@ -6,14 +6,14 @@
 #include <asm/ioctls.h>
 #include <sys/ioctl.h>
 
-sbus_err_t sbus_decode(const uint8_t packet[],
+sbus_err_t sbus_decode( uint8_t packet[],
                        uint16_t channels[],
                        uint8_t *opt)
 {
     if (!packet || !channels || !opt) {
         return SBUS_ERR_INVALID_ARG;
     }
-    if (*packet != SBUS_HEADER || packet[24] != SBUS_END) {
+    if (*packet != SBUS_HEADER || packet[SBUS_PACKET_SIZE - 1] != SBUS_END) {
         return SBUS_FAIL;
     }
 
@@ -139,8 +139,11 @@ sbus_err_t sbus_install(int *fd, const char *path, int blocking, uint8_t timeout
 
 sbus_err_t sbus_uninstall(const int *fd)
 {
-    if (*fd)
-        close(*fd);
+    if (*fd){
+        return close(*fd);
+    } else {
+	return -1;
+    }
 }
 
 int sbus_read(const int *fd, uint8_t *out, int bufSize)
