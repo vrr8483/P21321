@@ -1,17 +1,27 @@
 #include <cstdio>
 #include <ctime>
+#include <chrono>
 #include "SBUS.h"
+
+using namespace std::chrono;
 
 SBUS sbus;
 
 void onPacket(sbus_packet_t packet)
 {
-    static time_t lastPrint = time(nullptr);
-    time_t now = time(nullptr);
+	//printf("Callback called\n");
+    //static time_t lastPrint = time(nullptr);
+    //time_t now = time(nullptr);
+    //printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
+	milliseconds period = milliseconds(100);
+	static milliseconds lastms =  duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 
-    if (now > lastPrint)
-    {
-        lastPrint = now;
+	if (ms - lastms > period){
+    //if (now > lastPrint)
+    //{
+    	lastms = ms;
+        //lastPrint = now;
         printf("ch1: %u\tch2: %u\tch3: %u\tch4: %u\t"
                "ch5: %u\tch6: %u\tch7: %u\tch8: %u\t"
                "ch9: %u\tch10: %u\tch11: %u\tch12: %u\t"
@@ -23,7 +33,7 @@ void onPacket(sbus_packet_t packet)
                packet.ch17, packet.ch18,
                packet.frameLost ? "\tFrame lost" : "",
                packet.failsafe ? "\tFailsafe active" : "");
-    }
+    	}
 }
 
 int main()
@@ -32,7 +42,7 @@ int main()
 
     sbus.onPacket(onPacket);
 
-    sbus_err_t err = sbus.install("/dev/ttyAMA0", true);
+    sbus_err_t err = sbus.install("/dev/ttyUSB0", true);
     if (err != SBUS_OK)
     {
         fprintf(stderr, "SBUS install error: %d\n\r", err);
@@ -43,7 +53,7 @@ int main()
     {
         if (err == SBUS_ERR_DESYNC)
         {
-            fprintf(stderr, "SBUS desync\n\r");
+        	//fprintf(stderr, "SBUS desync\n\r");
         }
     }
 
