@@ -22,6 +22,12 @@ struct sensor_cmd_type {
 union sensor_cmd_packet_type {
   uint8_t bytes[8];
   sensor_cmd_type cmd;
+    sensor_cmd_packet_type::sensor_cmd_packet_type(){
+        for (uint i = 0; i < 8; ++i){
+            bytes[i] = 0;
+        }
+        sensor_cmd_type = {0};
+    }
 };
 
 SBUS sbus;
