@@ -31,7 +31,7 @@ SimpleSPortSensor sensor1(sensor1_id);
 SimpleSPortSensor sensor2(sensor2_id);
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(100000);
   hub.registerSensor(sensor1);       //Add sensor to the hub
   hub.registerSensor(sensor2);
   hub.begin();                      //Start listening
