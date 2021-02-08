@@ -29,11 +29,13 @@ struct sensor_cmd_type {
 union sensor_cmd_packet_type {
   uint8_t bytes[8];
   sensor_cmd_type cmd;
-    sensor_cmd_packet_type::sensor_cmd_packet_type(){
-        for (uint i = 0; i < 8; ++i){
+    sensor_cmd_packet_type(){
+        for (uint8_t i = 0; i < 8; ++i){
             bytes[i] = 0;
         }
-        sensor_cmd_type = {0};
+        cmd = {0};
+	cmd.header = SENSOR_CMD_HEADER;
+	cmd.footer = SENSOR_CMD_FOOTER;
     }
 };
 
@@ -73,11 +75,29 @@ void onPacket(sbus_packet_t packet)
     sensor_cmd_type cmd;
     cmd.sensor_id = 0x5958;
     cmd.value = value++;
+
+    uint8_t packet_bytes[8];
+    packet_bytes[0] = cmd.header;
+    packet_bytes[1] = cmd.sensor_id >> 8;   
+    packet_bytes[2] = cmd.sensor_id & 0xFF;   
+    packet_bytes[3] = (cmd.value >> 24) & 0xFF;
+    packet_bytes[4] = (cmd.value >> 16) & 0xFF;
+    packet_bytes[5] = (cmd.value >> 8) & 0xFF;
+    packet_bytes[6] = cmd.value & 0xFF;
+    packet_bytes[7] = cmd.footer;
+    /*sensor_cmd_packet_type sensor_packet;
+    sensor_packet.cmd = cmd;
+    for (uint8_t i = 0; i < 8; ++i){
+	printf("%d: %x\t", i, sensor_packet.bytes[i]);
+    }
+    printf("\n");
+    printf("Header: %x\t", sensor_packet.cmd.header);
+    printf("ID: %x\t", sensor_packet.cmd.sensor_id);
+    printf("Val: %x\t", sensor_packet.cmd.value);
+    printf("Footer: %x\t", sensor_packet.cmd.footer);
+    printf("\n");*/
     
-    sensor_cmd_packet_type packet;
-    packet.cmd = cmd;
-    
-    if (write(&(sbus._fd), packet, sizeof(sensor_cmd_packet_type)) != sizeof(sensor_cmd_packet_type)){
+    if (write(sbus._fd, packet_bytes, sizeof(sensor_cmd_packet_type)) != sizeof(sensor_cmd_packet_type)){
         printf("Failed to send sensor command.\n");
     }
 }
