@@ -5,7 +5,28 @@
 
 using namespace std::chrono;
 
+#define SENSOR_CMD_HEADER (0x53)
+#define SENSOR_CMD_FOOTER (0x45)
+
+struct sensor_cmd_type {
+  uint8_t header = SENSOR_CMD_HEADER;
+  uint16_t sensor_id;
+  uint32_t value;
+  uint8_t footer = SENSOR_CMD_FOOTER;
+
+  bool verify_cmd(){
+    return header == SENSOR_CMD_HEADER && footer == SENSOR_CMD_FOOTER;
+  }
+};
+
+union sensor_cmd_packet_type {
+  uint8_t bytes[8];
+  sensor_cmd_type cmd;
+};
+
 SBUS sbus;
+
+uint32_t value = 0;
 
 void onPacket(sbus_packet_t packet)
 {
@@ -34,6 +55,18 @@ void onPacket(sbus_packet_t packet)
                packet.frameLost ? "\tFrame lost" : "",
                packet.failsafe ? "\tFailsafe active" : "");
     	}
+    
+    //send command to sensor
+    sensor_cmd_type cmd;
+    cmd.sensor_id = 0x5958;
+    cmd.value = value++;
+    
+    sensor_cmd_packet_type packet;
+    packet.cmd = cmd;
+    
+    if (write(&(sbus._fd), packet, sizeof(sensor_cmd_packet_type)) != sizeof(sensor_cmd_packet_type)){
+        printf("Failed to send sensor command.\n");
+    }
 }
 
 int main()
