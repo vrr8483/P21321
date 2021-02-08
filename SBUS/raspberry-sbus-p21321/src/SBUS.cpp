@@ -113,7 +113,7 @@ sbus_err_t SBUS::write(sbus_packet_t packet)
 
 bool SBUS::verifyPacket()
 {
-    return (_packet[0] == SBUS_HEADER) && /*(_packet[SBUS_PACKET_SIZE - 2] == SBUS_SECOND_TO_LAST) &&*/ (_packet[SBUS_PACKET_SIZE - 1] == SBUS_END);
+    return (_packet[0] == SBUS_HEADER) && (_packet[SBUS_PACKET_SIZE - 1] == SBUS_END);
 }
 
 void SBUS::decodePacket()

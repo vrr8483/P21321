@@ -22,7 +22,6 @@ extern "C" {
 #define SBUS_BAUD 100000
 #define SBUS_PACKET_SIZE 25
 #define SBUS_HEADER 0x0f
-//#define SBUS_SECOND_TO_LAST 0xfe
 #define SBUS_END 0x00
 
 #define SBUS_OPT_C17 (uint8_t) 0b0001
