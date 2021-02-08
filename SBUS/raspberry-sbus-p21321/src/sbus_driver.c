@@ -127,7 +127,11 @@ sbus_err_t sbus_install(int *fd, const char *path, int blocking, uint8_t timeout
 
     options.c_cflag &= ~CBAUD;
     options.c_cflag |= BOTHER;
-    options.c_ispeed = options.c_ospeed = SBUS_BAUD;
+    options.c_ispeed = SBUS_BAUD;
+    
+    //EDIT BY JIM:
+    //output speed to be set to a standard baud rate for use in communicating with arduino
+    options.c_ospeed = ARDUINO_BAUD;
 
     if (ioctl(*fd, TCSETS2, &options) != 0)
     {

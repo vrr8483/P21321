@@ -20,6 +20,11 @@ extern "C" {
 #define SBUS_ERR_DESYNC -6
 
 #define SBUS_BAUD 100000
+
+//EDIT BY JIM:
+//output speed to be set to a standard baud rate for use in communicating with arduino
+#define ARDUINO_BAUD 115200
+
 #define SBUS_PACKET_SIZE 25
 #define SBUS_HEADER 0x0f
 #define SBUS_END 0x00
