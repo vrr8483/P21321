@@ -1,6 +1,13 @@
 #include <cstdio>
 #include <ctime>
 #include <chrono>
+
+#include <unistd.h>
+#include <fcntl.h>
+#include <asm/termbits.h>
+#include <asm/ioctls.h>
+#include <sys/ioctl.h>
+
 #include "SBUS.h"
 
 using namespace std::chrono;
