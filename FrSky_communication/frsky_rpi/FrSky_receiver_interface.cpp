@@ -47,70 +47,98 @@ SBUS sbus;
 
 uint32_t value = 0;
 
-void onPacket(sbus_packet_t packet)
-{
+int send_sensor_cmd(uint16_t id, uint32_t new_val){
+	//send command to sensor
+	sensor_cmd_type cmd;
+	cmd.sensor_id = id;
+	cmd.value = new_val;
+
+	//this stores the packet in big-endian format. 
+	//Raspbian is little-endian, as is Arduino. 
+	//Use endianness_reverse = true (line 6 in 
+	////frsky_arduino.ino as of the time of writing) 
+	////to reverse the endianness of the packet inside arduino.
+	/*uint8_t packet_bytes[8];
+	packet_bytes[0] = cmd.header;
+	packet_bytes[1] = cmd.sensor_id >> 8;   
+	packet_bytes[2] = cmd.sensor_id & 0xFF;   
+	packet_bytes[3] = (cmd.value >> 24) & 0xFF;
+	packet_bytes[4] = (cmd.value >> 16) & 0xFF;
+	packet_bytes[5] = (cmd.value >> 8) & 0xFF;
+	packet_bytes[6] = cmd.value & 0xFF;
+	packet_bytes[7] = cmd.footer;*/
+    	
+    	sensor_cmd_packet_type sensor_packet;
+    	sensor_packet.cmd = cmd;
+    	//debugging printouts
+    	/*for (uint8_t i = 0; i < 8; ++i){
+		printf("%d: %x\t", i, sensor_packet.bytes[i]);
+    	}
+    	printf("\n");
+    	printf("Header: %x\t", sensor_packet.cmd.header);
+    	printf("ID: %x\t", sensor_packet.cmd.sensor_id);
+    	printf("Val: %x\t", sensor_packet.cmd.value);
+    	printf("Footer: %x\t", sensor_packet.cmd.footer);
+    	printf("\n");*/
+
+	int packet_size = sizeof(sensor_cmd_packet_type);
+    	
+    	if (write(sbus._fd, sensor_packet.bytes, packet_size) != packet_size){
+        	fprintf(stderr, "Failed to send sensor command.\n");
+		return -1;
+    	}
+	return 0;
+}
+
+void onPacket(sbus_packet_t packet){
+
 	//printf("Callback called\n");
-    //static time_t lastPrint = time(nullptr);
-    //time_t now = time(nullptr);
-    //printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
+    	//static time_t lastPrint = time(nullptr);
+    	//time_t now = time(nullptr);
+    	//printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
 	milliseconds period = milliseconds(100);
-	static milliseconds lastms =  duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-	milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	static milliseconds lastms = duration_cast<milliseconds>(
+			system_clock::now().time_since_epoch()
+			);
+	milliseconds ms = duration_cast<milliseconds>(
+			system_clock::now().time_since_epoch()
+			);
 
 	if (ms - lastms > period){
-    //if (now > lastPrint)
-    //{
-    	lastms = ms;
-        //lastPrint = now;
-        printf("ch1: %u\tch2: %u\tch3: %u\tch4: %u\t"
-               "ch5: %u\tch6: %u\tch7: %u\tch8: %u\t"
-               "ch9: %u\tch10: %u\tch11: %u\tch12: %u\t"
-               "ch13: %u\tch14: %u\tch15: %u\tch16: %u\tch17: %u\tch18: %u%s%s\n\r",
-               packet.channels[0], packet.channels[1], packet.channels[2], packet.channels[3],
-               packet.channels[4], packet.channels[5], packet.channels[6], packet.channels[7],
-               packet.channels[8], packet.channels[9], packet.channels[10], packet.channels[11],
-               packet.channels[12], packet.channels[13], packet.channels[14], packet.channels[15],
-               packet.ch17, packet.ch18,
-               packet.frameLost ? "\tFrame lost" : "",
-               packet.failsafe ? "\tFailsafe active" : "");
+	//if (now > lastPrint){
+    		lastms = ms;
+        	//lastPrint = now;
+		for (int c = 0; c < 16; ++c){
+			printf("ch%d: %u\t", c+1, packet.channels[0]);
+		}
+		printf("ch17: %u\tch18: %u\t", packet.ch17, packet.ch18);
+		printf(
+			"%s\tFailsafe: %s\t", 
+			packet.frameLost ? "Frame lost" : "Frame fine",
+			packet.failsafe ? "active" : "inactive"
+		);
+		printf("\n");
+        	/*printf(
+			"ch1: %u\tch2: %u\tch3: %u\tch4: %u\t"
+			"ch5: %u\tch6: %u\tch7: %u\tch8: %u\t"
+			"ch9: %u\tch10: %u\tch11: %u\tch12: %u\t"
+			"ch13: %u\tch14: %u\tch15: %u\tch16: %u\t"
+			"ch17: %u\tch18: %u%s%s\n\r", 
+			packet.channels[0], packet.channels[1], 
+			packet.channels[2], packet.channels[3], 
+			packet.channels[4], packet.channels[5], 
+			packet.channels[6], packet.channels[7], 
+			packet.channels[8], packet.channels[9], 
+			packet.channels[10], packet.channels[11], 
+			packet.channels[12], packet.channels[13], 
+			packet.channels[14], packet.channels[15], 
+			packet.ch17, packet.ch18, 
+			packet.frameLost ? "\tFrame lost" : "", 
+			packet.failsafe ? "\tFailsafe active" : ""
+		);*/
+		send_sensor_cmd(0x5958, value++);
+		send_sensor_cmd(0x5900, value/10);
     	}
-    
-    //send command to sensor
-    sensor_cmd_type cmd;
-    cmd.sensor_id = 0x5958;
-    cmd.value = value++;
-
-    //this stores the packet in big-endian format. 
-    //Raspbian is little-endian, as is Arduino. 
-    //Use endianness_reverse = true (line 6 in 
-    //frsky_arduino.ino as of the time of writing) 
-    //to reverse the endianness of the packet inside arduino.
-    /*uint8_t packet_bytes[8];
-    packet_bytes[0] = cmd.header;
-    packet_bytes[1] = cmd.sensor_id >> 8;   
-    packet_bytes[2] = cmd.sensor_id & 0xFF;   
-    packet_bytes[3] = (cmd.value >> 24) & 0xFF;
-    packet_bytes[4] = (cmd.value >> 16) & 0xFF;
-    packet_bytes[5] = (cmd.value >> 8) & 0xFF;
-    packet_bytes[6] = cmd.value & 0xFF;
-    packet_bytes[7] = cmd.footer;*/
-    
-    sensor_cmd_packet_type sensor_packet;
-    sensor_packet.cmd = cmd;
-    //debugging printouts
-    /*for (uint8_t i = 0; i < 8; ++i){
-	printf("%d: %x\t", i, sensor_packet.bytes[i]);
-    }
-    printf("\n");
-    printf("Header: %x\t", sensor_packet.cmd.header);
-    printf("ID: %x\t", sensor_packet.cmd.sensor_id);
-    printf("Val: %x\t", sensor_packet.cmd.value);
-    printf("Footer: %x\t", sensor_packet.cmd.footer);
-    printf("\n");*/
-    
-    if (write(sbus._fd, sensor_packet.bytes, sizeof(sensor_cmd_packet_type)) != sizeof(sensor_cmd_packet_type)){
-        printf("Failed to send sensor command.\n");
-    }
 }
 
 int main()
