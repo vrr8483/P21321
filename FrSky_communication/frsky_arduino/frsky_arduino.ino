@@ -30,6 +30,8 @@ const uint16_t sensor2_id = 0x5958;
 SimpleSPortSensor sensor1(sensor1_id);
 SimpleSPortSensor sensor2(sensor2_id);
 
+int buffer_position = 0;
+
 void setup() {
   Serial.begin(100000, SERIAL_8E2);
   hub.registerSensor(sensor1);       //Add sensor to the hub
@@ -38,14 +40,34 @@ void setup() {
 }
 
 void loop() {
-  cmd_read: if (Serial.available() >= sizeof(sensor_cmd_packet_type)){
-    size_t num_bytes_read = Serial.readBytes(
-      sensor_cmd_packet.bytes, 
-      sizeof(sensor_cmd_packet_type)
-    );
-    if (num_bytes_read == sizeof(sensor_cmd_packet_type) 
-      && sensor_cmd_packet.cmd.verify_cmd()){
 
+  while (Serial.available()){
+    int new_data = Serial.read();
+    if (new_data == -1){
+      //no data available. shouldnt happen.
+      break;
+    }
+    
+    uint8_t new_byte = new_data & 0xFF;
+
+    if (buffer_position > 0 && buffer_position < 8){
+      // currently reading out packet data
+      sensor_cmd_packet.bytes[buffer_position++] = new_byte;
+    } else if (buffer_position == 0 && new_byte == SENSOR_CMD_HEADER){
+      //no current packet, just looking for a new header
+      sensor_cmd_packet.bytes[0] = new_byte;
+      buffer_position = 1;
+    }
+
+    if (buffer_position < 8){
+      //still readong out packet
+      continue;
+    }
+
+    //packet data size reached
+    if (sensor_cmd_packet.cmd.verify_cmd()){
+
+      //process packet
       if (endianness_reverse){
         // reverse sensor id byte-wise
         uint8_t tmp = sensor_cmd_packet.bytes[1];
@@ -60,7 +82,8 @@ void loop() {
         sensor_cmd_packet.bytes[4] = sensor_cmd_packet.bytes[5];
         sensor_cmd_packet.bytes[5] = tmp;
       }
-      
+
+      //check ID
       switch (sensor_cmd_packet.cmd.sensor_id){
         case sensor1_id:
           sensor1.value = sensor_cmd_packet.cmd.value;
@@ -73,10 +96,38 @@ void loop() {
           Serial.println(" did not match any sensor IDs.");
           break;
       }
-    } else {
-      Serial.println("Read error.");
-    }
-  }
+
+      //time for new packet
+      buffer_position = 0;
+      
+    } else { 
+      //invalid packet, look for header possibly inside this packet
+
+      bool found_header = false;
+      for (int i = 1; i < 8; ++i){
+        if (sensor_cmd_packet.bytes[i] == SENSOR_CMD_HEADER){
+          found_header = true;
+          for (int j = 0; i+j < 8; ++j){
+            //copy bytes, starting with header, 
+            //backwards in the buffer 
+            //so that the header is aligned to the start.
+            sensor_cmd_packet.bytes[j] = sensor_cmd_packet.bytes[i+j];
+          }
+
+          //set buffer position to point to next needed byte
+          buffer_position = 8 - i;
+        }
+      }
+
+      if (!found_header){
+        //no header in this packet, just reset and try again
+        buffer_position = 0;
+        Serial.println("Invalid packet.");
+      }
+    } //end packet validation
+
+  } //end while serial available
+  
   /*sensor1.value = sensor1.value + 1;              //Set the sensor value
   if (sensor1.value > 69000){ //nice
     sensor1.value = 0;
