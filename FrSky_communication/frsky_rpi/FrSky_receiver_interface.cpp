@@ -24,7 +24,7 @@ struct sensor_cmd_type {
   bool verify_cmd(){
     return header == SENSOR_CMD_HEADER && footer == SENSOR_CMD_FOOTER;
   }
-};
+}__attribute__((aligned(1)));
 
 union sensor_cmd_packet_type {
   uint8_t bytes[8];
@@ -85,7 +85,8 @@ void onPacket(sbus_packet_t packet)
     packet_bytes[5] = (cmd.value >> 8) & 0xFF;
     packet_bytes[6] = cmd.value & 0xFF;
     packet_bytes[7] = cmd.footer;
-    /*sensor_cmd_packet_type sensor_packet;
+    
+    sensor_cmd_packet_type sensor_packet;
     sensor_packet.cmd = cmd;
     for (uint8_t i = 0; i < 8; ++i){
 	printf("%d: %x\t", i, sensor_packet.bytes[i]);
@@ -95,7 +96,7 @@ void onPacket(sbus_packet_t packet)
     printf("ID: %x\t", sensor_packet.cmd.sensor_id);
     printf("Val: %x\t", sensor_packet.cmd.value);
     printf("Footer: %x\t", sensor_packet.cmd.footer);
-    printf("\n");*/
+    printf("\n");
     
     if (write(sbus._fd, packet_bytes, sizeof(sensor_cmd_packet_type)) != sizeof(sensor_cmd_packet_type)){
         printf("Failed to send sensor command.\n");
