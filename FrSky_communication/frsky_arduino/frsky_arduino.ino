@@ -3,7 +3,7 @@
 #define SENSOR_CMD_HEADER (0x53)
 #define SENSOR_CMD_FOOTER (0x45)
 
-bool endianness_reverse = true;
+bool endianness_reverse = false;
 
 struct sensor_cmd_type {
   uint8_t header;
