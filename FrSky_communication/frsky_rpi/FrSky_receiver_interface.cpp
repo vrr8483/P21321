@@ -24,7 +24,11 @@ struct sensor_cmd_type {
   bool verify_cmd(){
     return header == SENSOR_CMD_HEADER && footer == SENSOR_CMD_FOOTER;
   }
-}__attribute__((aligned(1)));
+}__attribute__((packed));
+//the __attribute__((packed)) part tells the compiler 
+//NOT to use word-aligning optimization for this struct, 
+//which is key for its use in a union.
+
 
 union sensor_cmd_packet_type {
   uint8_t bytes[8];
@@ -76,7 +80,12 @@ void onPacket(sbus_packet_t packet)
     cmd.sensor_id = 0x5958;
     cmd.value = value++;
 
-    uint8_t packet_bytes[8];
+    //this stores the packet in big-endian format. 
+    //Raspbian is little-endian, as is Arduino. 
+    //Use endianness_reverse = true (line 6 in 
+    //frsky_arduino.ino as of the time of writing) 
+    //to reverse the endianness of the packet inside arduino.
+    /*uint8_t packet_bytes[8];
     packet_bytes[0] = cmd.header;
     packet_bytes[1] = cmd.sensor_id >> 8;   
     packet_bytes[2] = cmd.sensor_id & 0xFF;   
@@ -84,11 +93,12 @@ void onPacket(sbus_packet_t packet)
     packet_bytes[4] = (cmd.value >> 16) & 0xFF;
     packet_bytes[5] = (cmd.value >> 8) & 0xFF;
     packet_bytes[6] = cmd.value & 0xFF;
-    packet_bytes[7] = cmd.footer;
+    packet_bytes[7] = cmd.footer;*/
     
     sensor_cmd_packet_type sensor_packet;
     sensor_packet.cmd = cmd;
-    for (uint8_t i = 0; i < 8; ++i){
+    //debugging printouts
+    /*for (uint8_t i = 0; i < 8; ++i){
 	printf("%d: %x\t", i, sensor_packet.bytes[i]);
     }
     printf("\n");
@@ -96,9 +106,9 @@ void onPacket(sbus_packet_t packet)
     printf("ID: %x\t", sensor_packet.cmd.sensor_id);
     printf("Val: %x\t", sensor_packet.cmd.value);
     printf("Footer: %x\t", sensor_packet.cmd.footer);
-    printf("\n");
+    printf("\n");*/
     
-    if (write(sbus._fd, packet_bytes, sizeof(sensor_cmd_packet_type)) != sizeof(sensor_cmd_packet_type)){
+    if (write(sbus._fd, sensor_packet.bytes, sizeof(sensor_cmd_packet_type)) != sizeof(sensor_cmd_packet_type)){
         printf("Failed to send sensor command.\n");
     }
 }
