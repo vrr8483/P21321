@@ -109,7 +109,7 @@ void onPacket(sbus_packet_t packet){
     		lastms = ms;
         	//lastPrint = now;
 		for (int c = 0; c < 16; ++c){
-			printf("ch%d: %u\t", c+1, packet.channels[0]);
+			printf("ch%d: %u\t", c+1, packet.channels[c]);
 		}
 		printf("ch17: %u\tch18: %u\t", packet.ch17, packet.ch18);
 		printf(
