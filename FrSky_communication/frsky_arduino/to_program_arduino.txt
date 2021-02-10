@@ -1,0 +1,7 @@
+../../arduino_cli_stuff/arduino-cli compile --fqbn arduino:avr:uno frsky_arduino.ino 
+
+../../arduino_cli_stuff/arduino-cli board list
+(find TTY path of arduino, usually /dev/ttyUSB0 or /dev/ttyACM0)
+
+../../arduino_cli_stuff/arduino-cli upload --fqbn arduino:avr:uno -p <path> 
+
