@@ -1,0 +1,2 @@
+Run this command in the directory of this text file:
+g++ -Wall -pedantic *.h *.c *.cpp -o FrSky_receiver_interface && ./FrSky_receiver_interface 
