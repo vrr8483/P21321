@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <ctime>
 #include <chrono>
+#include <string>
+#include <unistd.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -141,13 +143,33 @@ void onPacket(sbus_packet_t packet){
     	}
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+
+	//https://www.geeksforgeeks.org/getopt-function-in-c-to-parse-command-line-arguments/
+	int opt;
+	std::string arduino_filepath = "/dev/ttyUSB0";
+
+	while ((opt = getopt(argc, argv, ":p:")) != -1){
+		switch(opt){
+		case 'p':
+			printf("Using port: %s\n", optarg);
+			arduino_filepath = optarg;	
+			break;
+		case ':':
+			fprintf(stderr, "Option needs a value\n");
+			break;
+		case '?':
+			fprintf(stderr, "Unknown option: %c\n", optopt);
+			break;
+		}
+	}
+
     printf("SBUS blocking receiver example\n\r");
 
     sbus.onPacket(onPacket);
 
-    sbus_err_t err = sbus.install("/dev/ttyUSB0", true);
+    sbus_err_t err = sbus.install(arduino_filepath.c_str(), true);
     if (err != SBUS_OK)
     {
         fprintf(stderr, "SBUS install error: %d\n\r", err);
