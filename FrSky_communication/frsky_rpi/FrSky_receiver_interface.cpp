@@ -158,7 +158,7 @@ int main()
     {
         if (err == SBUS_ERR_DESYNC)
         {
-        	//fprintf(stderr, "SBUS desync\n\r");
+        	fprintf(stderr, "SBUS desync\n\r");
         }
     }
 
