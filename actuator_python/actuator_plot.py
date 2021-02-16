@@ -166,7 +166,7 @@ def commandLine():
         sys.stdout.flush()
         line = input('>>')
         if len(line) == 0:
-            pass
+            continue
 
         # quit command
         if line[0].lower() == 'q':
