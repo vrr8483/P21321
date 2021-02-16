@@ -1,0 +1,37 @@
+test 1: 
+20% actuator
+1.74 in thick
+mosty black with streaks and imperfections inside
+
+test2:
+same ice
+30% act
+
+test 3:
+same ice
+40%
+hit air pocket early and then broke the smaller layer of ice at the bottom instantly
+
+test 4:
+0.524 in thick
+many bubbles
+20% Act.
+
+test 5:
+0.524 in thick
+many bubbles
+30% Act.
+broke ice
+
+test 6:
+0.55 in
+a little snow stuck on top, few and small bubbles at bottom, mostly black ice
+20%
+
+test 7:
+0.55 in
+a little snow stuck on top, few and small bubbles at bottom, mostly black ice
+30%
+broke ice
+
+
