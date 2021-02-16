@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <ctime>
 #include <chrono>
+#include <string>
+#include <unistd.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -141,15 +143,57 @@ void onPacket(sbus_packet_t packet){
     	}
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+	const int num_usb_ports = 4;
+	const std::string port_base = "/dev/ttyUSB";
+
+	//https://www.geeksforgeeks.org/getopt-function-in-c-to-parse-command-line-arguments/
+	int opt;
+	std::string arduino_filepath = port_base + std::to_string(0);
+
+	while ((opt = getopt(argc, argv, ":p:")) != -1){
+		switch(opt){
+		case 'p':
+			printf("Using port: %s\n", optarg);
+			arduino_filepath = optarg;	
+			break;
+		case ':':
+			fprintf(stderr, "Option needs a value\n");
+			break;
+		case '?':
+			fprintf(stderr, "Unknown option: %c\n", optopt);
+			break;
+		}
+	}
+
     printf("SBUS blocking receiver example\n\r");
 
     sbus.onPacket(onPacket);
 
-    sbus_err_t err = sbus.install("/dev/ttyUSB0", true);
-    if (err != SBUS_OK)
-    {
+    sbus_err_t err = sbus.install(arduino_filepath.c_str(), true);
+    
+    if (err == SBUS_ERR_OPEN){
+	//loop through /dev/ttyUSB<n> and attempt to find a working USB port
+ 
+	printf("Could not open device at %s.\n"
+		"Attempting to find device by searching devices that match %s<n> (searching indices from 0 to %d)...\n", 
+		arduino_filepath.c_str(), port_base.c_str(), num_usb_ports - 1);
+
+	for (int i = 0; i < num_usb_ports; ++i){
+		std::string port_i = port_base + std::to_string(i);
+		err = sbus.install(port_i.c_str(), true);
+		if (err == SBUS_OK){
+			printf("Found device on %s\n", port_i.c_str());
+			break;
+		}
+	}
+	if (err != SBUS_OK){
+		fprintf(stderr, "Could not find device.\n");
+	}
+    } 
+    
+    if (err != SBUS_OK) {
         fprintf(stderr, "SBUS install error: %d\n\r", err);
         return err;
     }
