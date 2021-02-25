@@ -1,0 +1,2 @@
+g++ -Wall main.cpp PCA9685.cpp -lwiringPi -o example-jim
+
