@@ -1,0 +1,12 @@
+ice: 29.92 mm/39.62 mm
+test 1: bottomed out
+test 2: PWM 25
+test 4? PWM 20
+
+37.73 mm/37.68
+test 6 ice 2: bottomed out? 7.8 mm ce broken off bottom in prev. test 
+
+test 8: on a fault
+test 9: on a big bubble 13.11/13.24 air/8.36mm bottom
+test 10: near fault, ice broke not on fault or on drill spot 
+
