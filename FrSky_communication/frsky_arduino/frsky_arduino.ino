@@ -60,7 +60,7 @@ void loop() {
     }
 
     if (buffer_position < 8){
-      //still readong out packet
+      //still reading out packet
       continue;
     }
 
