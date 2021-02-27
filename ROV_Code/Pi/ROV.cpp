@@ -136,6 +136,10 @@ void arduino_serial_init(){
 		fprintf(stderr, "Error %i from tcsetattr\n", errno);
 		exit(errno);
 	}
+	
+	//delete contents of input buffer to avoid reading old data
+	usleep(10000); //sleep for 10ms cause apparently this wont work otherwise? Linus pls fix
+	tcflush(arduino_serial_fd, TCIFLUSH);
 }
 
 void log_file_init(){
@@ -147,9 +151,9 @@ void log_file_init(){
 	}
 }
 
-void log_data(int dist, int currsense){
+void log_data(int t, int dist, int currsense){
 	
-	static milliseconds first_log_time = duration_cast<milliseconds>(
+	/*static milliseconds first_log_time = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()
 			);
 
@@ -157,10 +161,10 @@ void log_data(int dist, int currsense){
 			system_clock::now().time_since_epoch()
 			); 
 	
-	uint64_t diff_ms = (now - first_log_time).count();
+	uint64_t diff_ms = (now - first_log_time).count();*/
 
 	std::string line = "";
-	line += std::to_string(diff_ms) + "," + std::to_string(dist) + "," + std::to_string(currsense) + '\n';
+	line += std::to_string(t) + "," + std::to_string(dist) + "," + std::to_string(currsense) + '\n';
 	log_file << line;
 }
 
@@ -297,25 +301,29 @@ void onPacket(sbus_packet_t packet){
 		size_t second_to_last = arduino_stream_buf.find_last_of('\n', index-1); 
 		
 		if (index > 1 && second_to_last != std::string::npos){
-			size_t tab_index = arduino_stream_buf.find_last_of('\t', index-1);
+			size_t tab_index_2 = arduino_stream_buf.find_last_of('\t', index-1);
+			size_t tab_index_1 = arduino_stream_buf.find_last_of('\t', tab_index_2-1);
 			
-			std::string first_num_str = arduino_stream_buf.substr(second_to_last+1, tab_index - second_to_last - 1);
-			std::string second_num_str = arduino_stream_buf.substr(tab_index+1, index - tab_index - 1);
-			//printf("First num: %s; second: %s\n", first_num_str.c_str(), second_num_str.c_str());
+			std::string first_num_str = arduino_stream_buf.substr(second_to_last+1, tab_index_1 - second_to_last - 1);
+			std::string second_num_str = arduino_stream_buf.substr(tab_index_1+1, tab_index_2 - tab_index_1 - 1);
+			std::string third_num_str = arduino_stream_buf.substr(tab_index_2+1, index - tab_index_2 - 1);
+			printf("First num: %s; second: %s; third: %s\n", first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
 			
+			int t = 0;
 			int actuator_dist = 0;
 			int curr_sense = 0;
 
 			try {
-				actuator_dist = std::stoi(first_num_str);
-				curr_sense = std::stoi(second_num_str);
+				t = std::stoi(first_num_str);
+				actuator_dist = std::stoi(second_num_str);
+				curr_sense = std::stoi(third_num_str);
 
-				//printf("D: %d; C: %d\n", actuator_dist, curr_sense);
+				printf("t: %d; D: %d; C: %d\n", t, actuator_dist, curr_sense);
 
 				send_sensor_cmd(0x5900, actuator_dist);
 				send_sensor_cmd(0x5958, curr_sense);
 
-				log_data(actuator_dist, curr_sense);
+				log_data(t, actuator_dist, curr_sense);
 
 				arduino_stream_buf.erase(0, index);
 			} catch (...){

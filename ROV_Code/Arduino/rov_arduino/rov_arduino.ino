@@ -52,6 +52,8 @@ void setup() {
 
 void loop() {
 
+  Serial.print(millis());
+  Serial.print("\t");
   Serial.print(analogRead(force_pin));
   Serial.print("\t");
   Serial.print(analogRead(curr_sense_pin));
