@@ -38,6 +38,11 @@ using namespace std::chrono;
 #define ENB_WPI_PIN (5)
 #define INB_WPI_PIN (6)
 
+#define INA_BCM_PIN (22)
+#define ENA_BCM_PIN (23)
+#define ENB_BCM_PIN (24)
+#define INB_BCM_PIN (25)
+
 struct sensor_cmd_type {
   uint8_t header = SENSOR_CMD_HEADER;
   uint16_t sensor_id;
@@ -78,10 +83,10 @@ void signalHandler( int signum ) {
 	pca.set_pwm(0, 0, 0);
 	pca.set_pwm(1, 0, 0);
 
-	digitalWrite(ENA_WPI_PIN, 0);
-	digitalWrite(ENB_WPI_PIN, 0);
-	digitalWrite(INA_WPI_PIN, 0);
-	digitalWrite(INB_WPI_PIN, 0);
+	digitalWrite(ENA_BCM_PIN, 0);
+	digitalWrite(ENB_BCM_PIN, 0);
+	digitalWrite(INA_BCM_PIN, 0);
+	digitalWrite(INB_BCM_PIN, 0);
 
    	exit(signum);  
 }
@@ -178,8 +183,8 @@ void onPacket(sbus_packet_t packet){
 	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > 1000;
 	bool B_enabled = packet.channels[SA_UP_CHANNEL] > 1000;
 
-	digitalWrite(INA_WPI_PIN, A_enabled);
-	digitalWrite(INB_WPI_PIN, B_enabled);
+	digitalWrite(INA_BCM_PIN, A_enabled);
+	digitalWrite(INB_BCM_PIN, B_enabled);
 
 	bool drill_on = packet.channels[SD_ON_CHANNEL] > 1000;
 	if (drill_on){
@@ -192,17 +197,21 @@ void onPacket(sbus_packet_t packet){
 
 int main(int argc, char* argv[])
 {
-	wiringPiSetup();
+	//use wpi pin numbers
+	//wiringPiSetup();
+	
+	//use BCM pin numbers
+	wiringPiSetupGpio();
 
-	pinMode(ENA_WPI_PIN, OUTPUT);
-	pinMode(ENB_WPI_PIN, OUTPUT);
-	pinMode(INA_WPI_PIN, OUTPUT);
-	pinMode(INB_WPI_PIN, OUTPUT);
+	pinMode(ENA_BCM_PIN, OUTPUT);
+	pinMode(ENB_BCM_PIN, OUTPUT);
+	pinMode(INA_BCM_PIN, OUTPUT);
+	pinMode(INB_BCM_PIN, OUTPUT);
 
 	std::signal(SIGINT, signalHandler);
 
-	digitalWrite(ENA_WPI_PIN, 1);
-	digitalWrite(ENB_WPI_PIN, 1);
+	digitalWrite(ENA_BCM_PIN, 1);
+	digitalWrite(ENB_BCM_PIN, 1);
 
 	pca.set_pwm_freq(1500.0);
 	pca.set_pwm(0, 0, 0);
