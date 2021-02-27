@@ -11,12 +11,32 @@
 
 #include "SBUS.h"
 
+#include <csignal>
+
+#include <wiringPi.h>
+
 #include "PCA9685.h"
 
 using namespace std::chrono;
 
+//channels as defined in the profile being used on the transmitter. 
+//these are channel indices, which are 0-indexed, so keep that in 
+//mind since the channels shown on the transmitter start at 1.
+#define LEFT_STEER_CHANNEL (0)
+#define LEFT_THROTTLE_CHANNEL (1)
+#define RIGHT_THROTTLE_CHANNEL (2)
+#define RIGHT_STEER_CHANNEL (3)
+#define SA_UP_CHANNEL (4)
+#define SA_DOWN_CHANNEL (5)
+#define SD_ON_CHANNEL (6)
+
 #define SENSOR_CMD_HEADER (0x53)
 #define SENSOR_CMD_FOOTER (0x45)
+
+#define INA_WPI_PIN (3)
+#define ENA_WPI_PIN (4)
+#define ENB_WPI_PIN (5)
+#define INB_WPI_PIN (6)
 
 struct sensor_cmd_type {
   uint8_t header = SENSOR_CMD_HEADER;
@@ -51,6 +71,20 @@ SBUS sbus;
 uint32_t value = 0;
 
 PCA9685 pca{};
+
+//exit fxn
+void signalHandler( int signum ) {
+   
+	pca.set_pwm(0, 0, 0);
+	pca.set_pwm(1, 0, 0);
+
+	digitalWrite(ENA_WPI_PIN, 0);
+	digitalWrite(ENB_WPI_PIN, 0);
+	digitalWrite(INA_WPI_PIN, 0);
+	digitalWrite(INB_WPI_PIN, 0);
+
+   	exit(signum);  
+}
 
 int send_sensor_cmd(uint16_t id, uint32_t new_val){
 	//send command to sensor
@@ -125,16 +159,50 @@ void onPacket(sbus_packet_t packet){
     	}*/
 
 	//set LED PWM to the adjusted value of packet.channels[0]
-	int adjusted_val = (int)(1.0*packet.channels[0]*(4095.0/1811));
-	pca.set_pwm(0, 0, adjusted_val);
+	int max_PWM = 25;
+	int min_PWM = 0;
+	int max_throttle = 1811;
+	int nominal_throttle = 992;
+	int PWM = (int)(
+			((max_PWM - min_PWM)*1.0/(max_throttle - nominal_throttle))*
+			(packet.channels[RIGHT_THROTTLE_CHANNEL] - nominal_throttle)
+			);
+	if (PWM < 0) PWM = 0;
+	int PCA_PWM = (int)((4095.0/100)*PWM);
+	//int adjusted_val = (int)(1.0*packet.channels[0]*(4095.0/1811));
+	pca.set_pwm(0, 0, PCA_PWM);
 
-	adjusted_val =  (int)(1.0*packet.channels[1]*(4095.0/1811));
-	pca.set_pwm(1, 0, adjusted_val);
+	//adjusted_val =  (int)(1.0*packet.channels[1]*(4095.0/1811));
+	//pca.set_pwm(1, 0, adjusted_val);
+
+	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > 1000;
+	bool B_enabled = packet.channels[SA_UP_CHANNEL] > 1000;
+
+	digitalWrite(INA_WPI_PIN, A_enabled);
+	digitalWrite(INB_WPI_PIN, B_enabled);
+
+	bool drill_on = packet.channels[SD_ON_CHANNEL] > 1000;
+	if (drill_on){
+		pca.set_pwm(1, 0, 4095);
+	} else {
+		pca.set_pwm(1, 0, 0);
+	}
 
 }
 
 int main(int argc, char* argv[])
 {
+	wiringPiSetup();
+
+	pinMode(ENA_WPI_PIN, OUTPUT);
+	pinMode(ENB_WPI_PIN, OUTPUT);
+	pinMode(INA_WPI_PIN, OUTPUT);
+	pinMode(INB_WPI_PIN, OUTPUT);
+
+	std::signal(SIGINT, signalHandler);
+
+	digitalWrite(ENA_WPI_PIN, 1);
+	digitalWrite(ENB_WPI_PIN, 1);
 
 	pca.set_pwm_freq(1500.0);
 	pca.set_pwm(0, 0, 0);
