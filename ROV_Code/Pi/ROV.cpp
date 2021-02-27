@@ -260,22 +260,33 @@ void onPacket(sbus_packet_t packet){
 		fprintf(stderr, "Arduino read error: %d\n", num_read);
 	} else {
 		arduino_stream_buf.append(readbuf, num_read);
+		
 		size_t index = arduino_stream_buf.find_last_of('\n');
 		size_t second_to_last = arduino_stream_buf.find_last_of('\n', index-1); 
+		
 		if (index > 1 && second_to_last != std::string::npos){
 			size_t tab_index = arduino_stream_buf.find_last_of('\t', index-1);
+			
 			std::string first_num_str = arduino_stream_buf.substr(second_to_last+1, tab_index - second_to_last - 1);
 			std::string second_num_str = arduino_stream_buf.substr(tab_index+1, index - tab_index - 1);
 			//printf("First num: %s; second: %s\n", first_num_str.c_str(), second_num_str.c_str());
 			
-			int actuator_dist = std::stoi(first_num_str);
-			int curr_sense = std::stoi(second_num_str);
-			//printf("D: %d; C: %d\n", actuator_dist, curr_sense);
+			int actuator_dist = 0;
+			int curr_sense = 0;
 
-			send_sensor_cmd(0x5900, actuator_dist);
-			send_sensor_cmd(0x5958, curr_sense);
+			try {
+				actuator_dist = std::stoi(first_num_str);
+				curr_sense = std::stoi(second_num_str);
 
-			arduino_stream_buf.erase(0, index);
+				//printf("D: %d; C: %d\n", actuator_dist, curr_sense);
+
+				send_sensor_cmd(0x5900, actuator_dist);
+				send_sensor_cmd(0x5958, curr_sense);
+
+				arduino_stream_buf.erase(0, index);
+			} catch (...){
+				fprintf(stderr, "Could not convert to integers: '%s', '%s'\n", first_num_str.c_str(), second_num_str.c_str());
+			}
 		}
 		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
 	}
