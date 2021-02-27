@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <iomanip>
+#include <ctime>
+
 #include <fcntl.h>
 #include <termios.h>
 //#include <asm/termbits.h>
@@ -142,11 +145,10 @@ void arduino_serial_init(){
 	tcflush(arduino_serial_fd, TCIFLUSH);
 }
 
-void log_file_init(){
-	std::string log_filename = "log.csv";
-	log_file.open(log_filename, std::ios::out);
+void log_file_init(std::string filename){
+	log_file.open(filename, std::ios::out);
 	if (!log_file){
-		fprintf(stderr, "Cannot open log file for writing at %s\n", log_filename.c_str());
+		fprintf(stderr, "Cannot open log file for writing at %s\n", filename.c_str());
 		exit(-1);
 	}
 }
@@ -348,8 +350,6 @@ int main(int argc, char* argv[])
 	pinMode(INA_BCM_PIN, OUTPUT);
 	pinMode(INB_BCM_PIN, OUTPUT);
 
-	std::signal(SIGINT, signalHandler);
-
 	digitalWrite(ENA_BCM_PIN, 1);
 	digitalWrite(ENB_BCM_PIN, 1);
 
@@ -357,17 +357,38 @@ int main(int argc, char* argv[])
 	pca.set_pwm(0, 0, 0);
 
 	arduino_serial_init();
-	log_file_init();
 
 	const int num_usb_ports = 4;
 	const std::string port_base = "/dev/ttyUSB";
+
+	std::time_t t = std::time(nullptr);
+    	std::tm tm = *std::localtime(&t);
+
+	std::string log_file_path = "Data/";
+	std::string log_file_prefix = "test_";
+
+	std::string log_file_suffix = "";
+	char timestring_buffer[256];
+	size_t chars_written = std::strftime(timestring_buffer, 256, "_%m_%d_%Y__%H_%M_%S", &tm);
+	if (chars_written == 0){
+		fprintf(stderr, "Datetime format failed\n");
+		exit(-1);
+	}
+	log_file_suffix += timestring_buffer;
+       	log_file_suffix += ".csv";
+	
+	std::string log_filename = log_file_path + log_file_prefix + log_file_suffix;
 
 	//https://www.geeksforgeeks.org/getopt-function-in-c-to-parse-command-line-arguments/
 	int opt;
 	std::string arduino_filepath = port_base + std::to_string(0);
 
-	while ((opt = getopt(argc, argv, ":p:")) != -1){
+	while ((opt = getopt(argc, argv, ":p:n:")) != -1){
 		switch(opt){
+		case 'n':
+			log_filename = log_file_path + log_file_prefix + optarg + log_file_suffix;
+			printf("Logging to %s\n", log_filename.c_str());
+			break;
 		case 'p':
 			printf("Using port: %s\n", optarg);
 			arduino_filepath = optarg;	
@@ -380,6 +401,8 @@ int main(int argc, char* argv[])
 			break;
 		}
 	}
+
+	log_file_init(log_filename);
 
     sbus.onPacket(onPacket);
 
@@ -409,6 +432,8 @@ int main(int argc, char* argv[])
         fprintf(stderr, "SBUS install error: %d\n\r", err);
         return err;
     }
+
+    std::signal(SIGINT, signalHandler);
 
     while ((err = sbus.read()) != SBUS_FAIL)
     {
