@@ -2,6 +2,8 @@
 #include <ctime>
 #include <chrono>
 #include <string>
+#include <iostream>
+#include <fstream>
 #include <unistd.h>
 #include <errno.h>
 
@@ -82,6 +84,8 @@ PCA9685 pca{};
 int arduino_serial_fd;
 std::string arduino_stream_buf = "";
 
+std::fstream log_file;
+
 void arduino_serial_init(){
 	//https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/#overview
 	arduino_serial_fd = open("/dev/ttyACM0", O_RDWR);
@@ -134,6 +138,32 @@ void arduino_serial_init(){
 	}
 }
 
+void log_file_init(){
+	std::string log_filename = "log.csv";
+	log_file.open(log_filename, std::ios::out);
+	if (!log_file){
+		fprintf(stderr, "Cannot open log file for writing at %s\n", log_filename.c_str());
+		exit(-1);
+	}
+}
+
+void log_data(int dist, int currsense){
+	
+	static milliseconds first_log_time = duration_cast<milliseconds>(
+			system_clock::now().time_since_epoch()
+			);
+
+	milliseconds now = duration_cast<milliseconds>(
+			system_clock::now().time_since_epoch()
+			); 
+	
+	uint64_t diff_ms = (now - first_log_time).count();
+
+	std::string line = "";
+	line += std::to_string(diff_ms) + "," + std::to_string(dist) + "," + std::to_string(currsense) + '\n';
+	log_file << line;
+}
+
 //exit fxn
 void signalHandler( int signum ) {
    
@@ -146,6 +176,8 @@ void signalHandler( int signum ) {
 	digitalWrite(INB_BCM_PIN, 0);
 	
 	close(arduino_serial_fd);
+
+	log_file.close();
 
    	exit(signum);  
 }
@@ -283,6 +315,8 @@ void onPacket(sbus_packet_t packet){
 				send_sensor_cmd(0x5900, actuator_dist);
 				send_sensor_cmd(0x5958, curr_sense);
 
+				log_data(actuator_dist, curr_sense);
+
 				arduino_stream_buf.erase(0, index);
 			} catch (...){
 				fprintf(stderr, "Could not convert to integers: '%s', '%s'\n", first_num_str.c_str(), second_num_str.c_str());
@@ -315,6 +349,7 @@ int main(int argc, char* argv[])
 	pca.set_pwm(0, 0, 0);
 
 	arduino_serial_init();
+	log_file_init();
 
 	const int num_usb_ports = 4;
 	const std::string port_base = "/dev/ttyUSB";
