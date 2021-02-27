@@ -3,9 +3,11 @@
 #include <chrono>
 #include <string>
 #include <unistd.h>
+#include <errno.h>
 
 #include <fcntl.h>
-#include <asm/termbits.h>
+#include <termios.h>
+//#include <asm/termbits.h>
 #include <asm/ioctls.h>
 #include <sys/ioctl.h>
 
@@ -37,6 +39,11 @@ using namespace std::chrono;
 #define ENA_WPI_PIN (4)
 #define ENB_WPI_PIN (5)
 #define INB_WPI_PIN (6)
+
+#define INA_BCM_PIN (22)
+#define ENA_BCM_PIN (23)
+#define ENB_BCM_PIN (24)
+#define INB_BCM_PIN (25)
 
 struct sensor_cmd_type {
   uint8_t header = SENSOR_CMD_HEADER;
@@ -72,16 +79,73 @@ uint32_t value = 0;
 
 PCA9685 pca{};
 
+int arduino_serial_fd;
+std::string arduino_stream_buf = "";
+
+void arduino_serial_init(){
+	//https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/#overview
+	arduino_serial_fd = open("/dev/ttyACM0", O_RDWR);
+	if (arduino_serial_fd < 0){
+		fprintf(stderr, "Arduino serial port open error %i\n", errno);
+		exit(errno);
+	}
+
+	termios tty;
+	if(tcgetattr(arduino_serial_fd, &tty) != 0) {
+		fprintf(stderr, "Error %i from tcgetattr\n", errno);
+		exit(errno);
+	}
+	
+	tty.c_cflag &= ~PARENB; // no parity
+	tty.c_cflag &= ~CSTOPB; //one stop bit
+
+	tty.c_cflag &= ~CSIZE; // Clear all the size bits
+	tty.c_cflag |= CS8; // 8 bits per byte
+
+	tty.c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control
+
+	tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines
+
+	tty.c_lflag &= ~ICANON; //disable canonical mode (line by line processing)
+
+	tty.c_lflag &= ~ECHO; // Disable echo
+	tty.c_lflag &= ~ECHOE; // Disable erasure
+	tty.c_lflag &= ~ECHONL; // Disable new-line echo
+	
+	tty.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
+
+	tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
+
+	tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL); 
+	// Disable any special handling of received bytes
+	
+	tty.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
+	tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+	
+	//dont block, return with what is immediately available.
+	tty.c_cc[VTIME] = 0;
+	tty.c_cc[VMIN] = 0;
+
+	cfsetspeed(&tty, B115200);
+
+	if (tcsetattr(arduino_serial_fd, TCSANOW, &tty) != 0) {
+		fprintf(stderr, "Error %i from tcsetattr\n", errno);
+		exit(errno);
+	}
+}
+
 //exit fxn
 void signalHandler( int signum ) {
    
 	pca.set_pwm(0, 0, 0);
 	pca.set_pwm(1, 0, 0);
 
-	digitalWrite(ENA_WPI_PIN, 0);
-	digitalWrite(ENB_WPI_PIN, 0);
-	digitalWrite(INA_WPI_PIN, 0);
-	digitalWrite(INB_WPI_PIN, 0);
+	digitalWrite(ENA_BCM_PIN, 0);
+	digitalWrite(ENB_BCM_PIN, 0);
+	digitalWrite(INA_BCM_PIN, 0);
+	digitalWrite(INB_BCM_PIN, 0);
+	
+	close(arduino_serial_fd);
 
    	exit(signum);  
 }
@@ -178,8 +242,8 @@ void onPacket(sbus_packet_t packet){
 	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > 1000;
 	bool B_enabled = packet.channels[SA_UP_CHANNEL] > 1000;
 
-	digitalWrite(INA_WPI_PIN, A_enabled);
-	digitalWrite(INB_WPI_PIN, B_enabled);
+	digitalWrite(INA_BCM_PIN, A_enabled);
+	digitalWrite(INB_BCM_PIN, B_enabled);
 
 	bool drill_on = packet.channels[SD_ON_CHANNEL] > 1000;
 	if (drill_on){
@@ -187,25 +251,59 @@ void onPacket(sbus_packet_t packet){
 	} else {
 		pca.set_pwm(1, 0, 0);
 	}
+	
+	const int buf_size = 256;
+	char readbuf[buf_size];
+	int num_read = read(arduino_serial_fd, &readbuf, buf_size);
+
+	if (num_read < 0){
+		fprintf(stderr, "Arduino read error: %d\n", num_read);
+	} else {
+		arduino_stream_buf.append(readbuf, num_read);
+		size_t index = arduino_stream_buf.find_last_of('\n');
+		size_t second_to_last = arduino_stream_buf.find_last_of('\n', index-1); 
+		if (index > 1 && second_to_last != std::string::npos){
+			size_t tab_index = arduino_stream_buf.find_last_of('\t', index-1);
+			std::string first_num_str = arduino_stream_buf.substr(second_to_last+1, tab_index - second_to_last - 1);
+			std::string second_num_str = arduino_stream_buf.substr(tab_index+1, index - tab_index - 1);
+			//printf("First num: %s; second: %s\n", first_num_str.c_str(), second_num_str.c_str());
+			
+			int actuator_dist = std::stoi(first_num_str);
+			int curr_sense = std::stoi(second_num_str);
+			//printf("D: %d; C: %d\n", actuator_dist, curr_sense);
+
+			send_sensor_cmd(0x5900, actuator_dist);
+			send_sensor_cmd(0x5958, curr_sense);
+
+			arduino_stream_buf.erase(0, index);
+		}
+		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
+	}
 
 }
 
 int main(int argc, char* argv[])
 {
-	wiringPiSetup();
+	//use wpi pin numbers
+	//wiringPiSetup();
+	
+	//use BCM pin numbers
+	wiringPiSetupGpio();
 
-	pinMode(ENA_WPI_PIN, OUTPUT);
-	pinMode(ENB_WPI_PIN, OUTPUT);
-	pinMode(INA_WPI_PIN, OUTPUT);
-	pinMode(INB_WPI_PIN, OUTPUT);
+	pinMode(ENA_BCM_PIN, OUTPUT);
+	pinMode(ENB_BCM_PIN, OUTPUT);
+	pinMode(INA_BCM_PIN, OUTPUT);
+	pinMode(INB_BCM_PIN, OUTPUT);
 
 	std::signal(SIGINT, signalHandler);
 
-	digitalWrite(ENA_WPI_PIN, 1);
-	digitalWrite(ENB_WPI_PIN, 1);
+	digitalWrite(ENA_BCM_PIN, 1);
+	digitalWrite(ENB_BCM_PIN, 1);
 
 	pca.set_pwm_freq(1500.0);
 	pca.set_pwm(0, 0, 0);
+
+	arduino_serial_init();
 
 	const int num_usb_ports = 4;
 	const std::string port_base = "/dev/ttyUSB";
