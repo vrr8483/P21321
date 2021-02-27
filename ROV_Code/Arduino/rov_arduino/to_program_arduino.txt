@@ -7,11 +7,11 @@ if this is your first time running arduino_cli:
 -----------------------------------
 To compile and upload:
 
-../../../arduino_cli_stuff/arduino-cli compile --fqbn arduino:avr:uno rov_arduino.ino 
+../../../arduino_cli_stuff/arduino-cli compile --fqbn arduino:avr:mega rov_arduino.ino 
 
 ../../../arduino_cli_stuff/arduino-cli board list
 (find TTY path of arduino, usually /dev/ttyUSB0 or /dev/ttyACM0)
 
-../../../arduino_cli_stuff/arduino-cli upload --fqbn arduino:avr:uno -p <TTY path> 
+../../../arduino_cli_stuff/arduino-cli upload --fqbn arduino:avr:mega -p <TTY path> 
 
 
