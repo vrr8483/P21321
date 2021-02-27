@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-g++ -Wall -lwiringPi *.cpp *.c -o ROV
+g++ -Wall --pedantic -lwiringPi *.cpp *.c -o ROV
