@@ -24,6 +24,9 @@
 
 using namespace std::chrono;
 
+#define ACTUATOR_DIST_SENSOR_ID (0x5900)
+#define CURR_SENSE_SENSOR_ID (0x5958)
+
 //channels as defined in the profile being used on the transmitter. 
 //these are channel indices, which are 0-indexed, so keep that in 
 //mind since the channels shown on the transmitter start at 1.
@@ -56,6 +59,30 @@ using namespace std::chrono;
 #define ENA_BCM_PIN (23)
 #define ENB_BCM_PIN (24)
 #define INB_BCM_PIN (25)
+
+enum PWM_pins_enum {
+    PWM_CHANNEL_ACTUATOR = 0,
+    PWM_CHANNEL_DRILL,
+    PWM_CHANNEL_2,
+    PWM_CHANNEL_3,
+    
+    PWM_CHANNEL_4,
+    PWM_CHANNEL_5,
+    PWM_CHANNEL_6,
+    PWM_CHANNEL_7,
+    
+    PWM_CHANNEL_8,
+    PWM_CHANNEL_9,
+    PWM_CHANNEL_10,
+    PWM_CHANNEL_11,
+    
+    PWM_CHANNEL_12,
+    PWM_CHANNEL_13,
+    PWM_CHANNEL_14,
+    PWM_CHANNEL_15,
+    
+    num_PWM_channels
+}
 
 struct sensor_cmd_type {
   uint8_t header = SENSOR_CMD_HEADER;
@@ -177,11 +204,12 @@ void log_data(int t, int dist, int currsense){
 	log_file << line;
 }
 
+
+
 //called when SIGINT is received (Ctrl+C)
 void signalHandler(int signum) {
    
-	pca.set_pwm(0, 0, 0);
-	pca.set_pwm(1, 0, 0);
+	pca.set_all_pwm(0, 0);
 
 	digitalWrite(ENA_BCM_PIN, 0);
 	digitalWrite(ENB_BCM_PIN, 0);
@@ -273,29 +301,33 @@ void onPacket(sbus_packet_t packet){
 	int min_PWM = 0;
 	int max_throttle = 1811;
 	int nominal_throttle = 992;
-	int PWM = (int)(
+    int max_PCA_val = 4095;
+	
+    int PWM = (int)(
 			((max_PWM - min_PWM)*1.0/(max_throttle - nominal_throttle))*
 			(packet.channels[RIGHT_THROTTLE_CHANNEL] - nominal_throttle)
 			);
-	if (PWM < 0) PWM = 0;
-	int PCA_PWM = (int)((4095.0/100)*PWM);
-	//int adjusted_val = (int)(1.0*packet.channels[0]*(4095.0/1811));
-	pca.set_pwm(0, 0, PCA_PWM);
+	
+    if (PWM < 0) PWM = 0;
+	int PCA_PWM = (int)((max_PCA_val*1.0/100)*PWM);
 
-	//adjusted_val =  (int)(1.0*packet.channels[1]*(4095.0/1811));
-	//pca.set_pwm(1, 0, adjusted_val);
+    pca.set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);
 
-	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > 1000;
-	bool B_enabled = packet.channels[SA_UP_CHANNEL] > 1000;
+    
+    //greater than this, and the switch is active (condition satisfied)
+    int FrSky_switch_threshold = 1000;
+
+	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > FrSky_switch_threshold;
+	bool B_enabled = packet.channels[SA_UP_CHANNEL] > FrSky_switch_threshold;
 
 	digitalWrite(INA_BCM_PIN, A_enabled);
 	digitalWrite(INB_BCM_PIN, B_enabled);
 
-	bool drill_on = packet.channels[SD_ON_CHANNEL] > 1000;
+	bool drill_on = packet.channels[SD_ON_CHANNEL] > FrSky_switch_threshold;
 	if (drill_on){
-		pca.set_pwm(1, 0, 4095);
+		pca.set_pwm(PWM_CHANNEL_DRILL, 0, max_PCA_val);
 	} else {
-		pca.set_pwm(1, 0, 0);
+		pca.set_pwm(PWM_CHANNEL_DRILL, 0, 0);
 	}
 	
 	const int buf_size = 256;
@@ -305,41 +337,50 @@ void onPacket(sbus_packet_t packet){
 	if (num_read < 0){
 		fprintf(stderr, "Arduino read error: %d\n", num_read);
 	} else {
+        //append to global read buffer in case packets got split up
 		arduino_stream_buf.append(readbuf, num_read);
 		
+        //index of the very LAST carriage return
 		size_t index = arduino_stream_buf.find_last_of('\n');
 		size_t second_to_last = arduino_stream_buf.find_last_of('\n', index-1); 
 		
+        //if both carriage returns were found and make sense
 		if (index > 1 && second_to_last != std::string::npos){
+            
 			size_t tab_index_2 = arduino_stream_buf.find_last_of('\t', index-1);
 			size_t tab_index_1 = arduino_stream_buf.find_last_of('\t', tab_index_2-1);
 			
+            //get numbers as strings first
 			std::string first_num_str = arduino_stream_buf.substr(second_to_last+1, tab_index_1 - second_to_last - 1);
 			std::string second_num_str = arduino_stream_buf.substr(tab_index_1+1, tab_index_2 - tab_index_1 - 1);
 			std::string third_num_str = arduino_stream_buf.substr(tab_index_2+1, index - tab_index_2 - 1);
-			printf("First num: %s; second: %s; third: %s\n", first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
+			//printf("First num: %s; second: %s; third: %s\n", first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
 			
 			int t = 0;
 			int actuator_dist = 0;
 			int curr_sense = 0;
 
 			try {
+                //attempt to convert to ints. throws an exception if stoi fails
 				t = std::stoi(first_num_str);
 				actuator_dist = std::stoi(second_num_str);
 				curr_sense = std::stoi(third_num_str);
 
-				printf("t: %d; D: %d; C: %d\n", t, actuator_dist, curr_sense);
+				//printf("t: %d; D: %d; C: %d\n", t, actuator_dist, curr_sense);
 
-				send_sensor_cmd(0x5900, actuator_dist);
-				send_sensor_cmd(0x5958, curr_sense);
-
+				send_sensor_cmd(ACTUATOR_DIST_SENSOR_ID, actuator_dist);
+				send_sensor_cmd(CURR_SENSE_SENSOR_ID, curr_sense);
+                
+                //write to log file
 				log_data(t, actuator_dist, curr_sense);
-
+                
+                //erase anything before and including this packet
 				arduino_stream_buf.erase(0, index);
 			} catch (...){
 				fprintf(stderr, "Could not convert to integers: '%s', '%s'\n", first_num_str.c_str(), second_num_str.c_str());
 			}
 		}
+        //garbage collection of global buffer
 		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
 	}
 
@@ -361,8 +402,10 @@ int main(int argc, char* argv[])
 	digitalWrite(ENA_BCM_PIN, 1);
 	digitalWrite(ENB_BCM_PIN, 1);
 
+    //1500 Hz is close to the max frequency of the PCA9685
 	pca.set_pwm_freq(1500.0);
-	pca.set_pwm(0, 0, 0);
+    //turn off PWM
+	pca.set_all_pwm(0, 0);
 
 	arduino_serial_init();
 
@@ -375,8 +418,9 @@ int main(int argc, char* argv[])
 
 	std::string log_file_suffix = "";
     
-	char timestring_buffer[256];
-	size_t chars_written = std::strftime(timestring_buffer, 256, "_%m_%d_%Y__%H_%M_%S", &tm);
+    const int buf_size = 256
+	char timestring_buffer[buf_size];
+	size_t chars_written = std::strftime(timestring_buffer, buf_size, "_%m_%d_%Y__%H_%M_%S", &tm);
 	if (chars_written == 0){
 		fprintf(stderr, "Datetime format failed\n");
 		exit(-1);
