@@ -215,11 +215,7 @@ void log_data(int t, int dist, int currsense){
 	log_file << line;
 }
 
-
-
-//called when SIGINT is received (Ctrl+C)
-void exitFxn(int signum) {
- 
+void cleanup(){
 	pca->set_all_pwm(0, 0);
 	delete pca;
 
@@ -231,6 +227,12 @@ void exitFxn(int signum) {
 	close(arduino_serial_fd);
 
 	log_file.close();
+}
+
+//called when SIGINT is received (Ctrl+C)
+void exitFxn(int signum) {
+ 
+	cleanup();
 
 	exit(signum);
 }
@@ -562,9 +564,8 @@ int main(int argc, char* argv[])
 	
 	fprintf(stderr, "SBUS error: %d\n\r", err);
 	
-	exitFxn(err);
+	cleanup();
 	
-	//should not reach this line
 	return err;
 }
 
