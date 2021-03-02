@@ -82,7 +82,7 @@ enum PWM_pins_enum {
     PWM_CHANNEL_15,
     
     num_PWM_channels
-}
+};
 
 struct sensor_cmd_type {
   uint8_t header = SENSOR_CMD_HEADER;
@@ -418,7 +418,7 @@ int main(int argc, char* argv[])
 
 	std::string log_file_suffix = "";
     
-    const int buf_size = 256
+    const int buf_size = 256;
 	char timestring_buffer[buf_size];
 	size_t chars_written = std::strftime(timestring_buffer, buf_size, "_%m_%d_%Y__%H_%M_%S", &tm);
 	if (chars_written == 0){
