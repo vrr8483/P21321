@@ -1,28 +1,33 @@
-#include <cstdio>
-#include <ctime>
-#include <ctime>
+//used for catching program interrupt signals
 #include <csignal>
 
-#include <chrono>
-#include <string>
-#include <iostream>
+//used for log file writing
 #include <fstream>
+
+//getopt, read, write, and close
 #include <unistd.h>
-#include <errno.h>
+
+//localtime, time, strftime
 #include <iomanip>
+
+//file open
 #include <fcntl.h>
+
+//serial port interface capabilities
 #include <termios.h>
 
-//#include <asm/termbits.h>
-#include <asm/ioctls.h>
-#include <sys/ioctl.h>
-
+//GPIO manipulation (digitalWrite)
 #include <wiringPi.h>
 
+//SBUS protocol
 #include "SBUS.h"
+
+//I2C PWM hat controls
 #include "PCA9685.h"
 
-using namespace std::chrono;
+//uncomment if using timing stuff
+//#include <chrono>
+//using namespace std::chrono;
 
 #define ACTUATOR_DIST_SENSOR_ID (0x5900)
 #define CURR_SENSE_SENSOR_ID (0x5958)
@@ -189,6 +194,7 @@ void log_file_init(std::string filename){
 
 void log_data(int t, int dist, int currsense){
 	
+	//need std::chrono for this
 	/*static milliseconds first_log_time = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()
 			);
@@ -268,8 +274,11 @@ int send_sensor_cmd(uint16_t id, uint32_t new_val){
 
 void onPacket(sbus_packet_t packet){
 
+
 	//printf("Callback called\n");
-    //printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
+	//printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
+	
+	//need std::chrono for this
 	//milliseconds period = milliseconds(100);
 	/*static milliseconds lastms = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()
