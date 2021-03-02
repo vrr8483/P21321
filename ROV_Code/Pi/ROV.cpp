@@ -66,38 +66,38 @@
 #define INB_BCM_PIN (25)
 
 enum PWM_pins_enum {
-    PWM_CHANNEL_ACTUATOR = 0,
-    PWM_CHANNEL_DRILL,
-    PWM_CHANNEL_2,
-    PWM_CHANNEL_3,
-    
-    PWM_CHANNEL_4,
-    PWM_CHANNEL_5,
-    PWM_CHANNEL_6,
-    PWM_CHANNEL_7,
-    
-    PWM_CHANNEL_8,
-    PWM_CHANNEL_9,
-    PWM_CHANNEL_10,
-    PWM_CHANNEL_11,
-    
-    PWM_CHANNEL_12,
-    PWM_CHANNEL_13,
-    PWM_CHANNEL_14,
-    PWM_CHANNEL_15,
-    
-    num_PWM_channels
+	PWM_CHANNEL_ACTUATOR = 0,
+	PWM_CHANNEL_DRILL,
+	PWM_CHANNEL_2,
+	PWM_CHANNEL_3,
+	
+	PWM_CHANNEL_4,
+	PWM_CHANNEL_5,
+	PWM_CHANNEL_6,
+	PWM_CHANNEL_7,
+	
+	PWM_CHANNEL_8,
+	PWM_CHANNEL_9,
+	PWM_CHANNEL_10,
+	PWM_CHANNEL_11,
+	
+	PWM_CHANNEL_12,
+	PWM_CHANNEL_13,
+	PWM_CHANNEL_14,
+	PWM_CHANNEL_15,
+	
+	num_PWM_channels
 };
 
 struct sensor_cmd_type {
-  uint8_t header = SENSOR_CMD_HEADER;
-  uint16_t sensor_id;
-  uint32_t value;
-  uint8_t footer = SENSOR_CMD_FOOTER;
+	uint8_t header = SENSOR_CMD_HEADER;
+	uint16_t sensor_id;
+	uint32_t value;
+	uint8_t footer = SENSOR_CMD_FOOTER;
 
-  bool verify_cmd(){
-    return header == SENSOR_CMD_HEADER && footer == SENSOR_CMD_FOOTER;
-  }
+	bool verify_cmd(){
+		return header == SENSOR_CMD_HEADER && footer == SENSOR_CMD_FOOTER;
+	}
 }__attribute__((packed));
 //the __attribute__((packed)) part tells the compiler 
 //NOT to use word-aligning optimization for this struct, 
@@ -105,16 +105,18 @@ struct sensor_cmd_type {
 
 
 union sensor_cmd_packet_type {
-  uint8_t bytes[8];
-  sensor_cmd_type cmd;
-    sensor_cmd_packet_type(){
-        for (uint8_t i = 0; i < 8; ++i){
-            bytes[i] = 0;
-        }
-        cmd = {0};
-	cmd.header = SENSOR_CMD_HEADER;
-	cmd.footer = SENSOR_CMD_FOOTER;
-    }
+	
+	uint8_t bytes[8];
+	sensor_cmd_type cmd;
+	
+	sensor_cmd_packet_type(){
+		for (uint8_t i = 0; i < 8; ++i){
+			bytes[i] = 0;
+		}
+		cmd = {0};
+		cmd.header = SENSOR_CMD_HEADER;
+		cmd.footer = SENSOR_CMD_FOOTER;
+	}
 };
 
 SBUS sbus;
@@ -217,7 +219,7 @@ void log_data(int t, int dist, int currsense){
 
 //called when SIGINT is received (Ctrl+C)
 void signalHandler(int signum) {
-   
+ 
 	pca->set_all_pwm(0, 0);
 	delete pca;
 
@@ -230,7 +232,7 @@ void signalHandler(int signum) {
 
 	log_file.close();
 
-   	exit(signum);  
+	exit(signum);
 }
 
 int send_sensor_cmd(uint16_t id, uint32_t new_val){
@@ -246,33 +248,33 @@ int send_sensor_cmd(uint16_t id, uint32_t new_val){
 	//to reverse the endianness of the packet inside arduino.
 	/*uint8_t packet_bytes[8];
 	packet_bytes[0] = cmd.header;
-	packet_bytes[1] = cmd.sensor_id >> 8;   
-	packet_bytes[2] = cmd.sensor_id & 0xFF;   
+	packet_bytes[1] = cmd.sensor_id >> 8;
+	packet_bytes[2] = cmd.sensor_id & 0xFF;
 	packet_bytes[3] = (cmd.value >> 24) & 0xFF;
 	packet_bytes[4] = (cmd.value >> 16) & 0xFF;
 	packet_bytes[5] = (cmd.value >> 8) & 0xFF;
 	packet_bytes[6] = cmd.value & 0xFF;
 	packet_bytes[7] = cmd.footer;*/
-    	
-    sensor_cmd_packet_type sensor_packet;
-    sensor_packet.cmd = cmd;
-    //debugging printouts
-    /*for (uint8_t i = 0; i < 8; ++i){
-        printf("%d: %x\t", i, sensor_packet.bytes[i]);
-     }
-    printf("\n");
-    printf("Header: %x\t", sensor_packet.cmd.header);
-    printf("ID: %x\t", sensor_packet.cmd.sensor_id);
-    printf("Val: %x\t", sensor_packet.cmd.value);
-    printf("Footer: %x\t", sensor_packet.cmd.footer);
-    printf("\n");*/
+	
+	sensor_cmd_packet_type sensor_packet;
+	sensor_packet.cmd = cmd;
+	//debugging printouts
+	/*for (uint8_t i = 0; i < 8; ++i){
+		printf("%d: %x\t", i, sensor_packet.bytes[i]);
+	}
+	printf("\n");
+	printf("Header: %x\t", sensor_packet.cmd.header);
+	printf("ID: %x\t", sensor_packet.cmd.sensor_id);
+	printf("Val: %x\t", sensor_packet.cmd.value);
+	printf("Footer: %x\t", sensor_packet.cmd.footer);
+	printf("\n");*/
 
 	int packet_size = sizeof(sensor_cmd_packet_type);
-    	
-    if (write(sbus._fd, sensor_packet.bytes, packet_size) != packet_size){
-        fprintf(stderr, "Failed to send sensor command.\n");
+		
+	if (write(sbus._fd, sensor_packet.bytes, packet_size) != packet_size){
+		fprintf(stderr, "Failed to send sensor command.\n");
 		return -1;
-    }
+	}
 	return 0;
 }
 
@@ -292,8 +294,8 @@ void onPacket(sbus_packet_t packet){
 			);*/
 
 	/*if (ms - lastms > period){
-    		lastms = ms;
-        	//lastPrint = now;
+		lastms = ms;
+		lastPrint = now;
 		for (int c = 0; c < 16; ++c){
 			printf("ch%d: %u\t", c+1, packet.channels[c]);
 		}
@@ -307,7 +309,7 @@ void onPacket(sbus_packet_t packet){
 		static int value = 0;
 		send_sensor_cmd(0x5958, value++);
 		send_sensor_cmd(0x5900, value/10);
-    	}*/
+		}*/
 
 	//set LED PWM to the adjusted value of packet.channels[0]
 	
@@ -375,7 +377,7 @@ void onPacket(sbus_packet_t packet){
 			size_t tab_index_2 = arduino_stream_buf.find_last_of('\t', index-1);
 			size_t tab_index_1 = arduino_stream_buf.find_last_of('\t', tab_index_2-1);
 			
-            //get numbers as strings first
+			//get numbers as strings first
 			std::string first_num_str = 
 				arduino_stream_buf.substr(
 						second_to_last+1, 
@@ -459,15 +461,15 @@ int main(int argc, char* argv[])
 
 	arduino_serial_init();
 
-    
+	
 	std::time_t t = std::time(nullptr);
-    	std::tm tm = *std::localtime(&t);
+	std::tm tm = *std::localtime(&t);
 
 	std::string log_file_path = "Data/";
 	std::string log_file_prefix = "test_";
 
 	std::string log_file_suffix = "";
-    
+	
 	const int buf_size = 256;
 	char timestring_buffer[buf_size];
 	size_t chars_written = std::strftime(timestring_buffer, buf_size, "_%m_%d_%Y__%H_%M_%S", &tm);
@@ -476,14 +478,14 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 	log_file_suffix += timestring_buffer;
-       	log_file_suffix += ".csv";
+	log_file_suffix += ".csv";
 	
 	std::string log_filename = log_file_path + log_file_prefix + log_file_suffix;
 
-    
+	
 	//https://www.geeksforgeeks.org/getopt-function-in-c-to-parse-command-line-arguments/
 	int opt;
-    
+	
 	const int num_usb_ports = 4;
 	const std::string port_base = "/dev/ttyUSB";
 	std::string arduino_filepath = port_base + std::to_string(0);
@@ -514,7 +516,7 @@ int main(int argc, char* argv[])
 	sbus.onPacket(onPacket);
 
 	sbus_err_t err = sbus.install(arduino_filepath.c_str(), true);
-    
+	
 	if (err == SBUS_ERR_OPEN){
 		//loop through /dev/ttyUSB<n> and attempt to find a working USB port
  
