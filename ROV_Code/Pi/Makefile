@@ -10,7 +10,7 @@ OBJS = $(CPP_OBJS) $(C_OBJS)
 PROG = ROV
 
 CC = g++
-CPPFLAGS = -Wall -pedantic
+CPPFLAGS = -Wall -pedantic -g
 LIBS = -lwiringPi
 COMPILE_CMD = $(CC) $(CPPFLAGS) $(LIBS)
 
