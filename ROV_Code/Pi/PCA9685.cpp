@@ -11,13 +11,13 @@
 
 PCA9685::PCA9685(const std::string &device, int address) {
   if((i2c_fd = open(device.c_str(), O_RDWR)) < 0) {
-    std::cout << "open: " << std::strerror(errno) << "\n";
-    exit(1);
+    std::cerr << "open: " << std::strerror(errno) << "\n";
+    throw std::invalid_argument("Cannot open I2C device");
   }
   int addr = address;
   if(ioctl(i2c_fd, I2C_SLAVE, addr) < 0) {
-    std::cout << "ioctl: " << std::strerror(errno) << "\n";
-    exit(1);
+    std::cerr << "ioctl: " << std::strerror(errno) << "\n";
+    throw std::runtime_error("I2C ioctl error");
   }
   set_all_pwm(0,0);
   auto ret = wiringPiI2CWriteReg8(i2c_fd, MODE2, OUTDRV);

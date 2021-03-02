@@ -119,7 +119,7 @@ union sensor_cmd_packet_type {
 
 SBUS sbus;
 
-PCA9685 pca{};
+PCA9685* pca;
 
 int arduino_serial_fd;
 std::string arduino_stream_buf = "";
@@ -215,7 +215,8 @@ void log_data(int t, int dist, int currsense){
 //called when SIGINT is received (Ctrl+C)
 void signalHandler(int signum) {
    
-	pca.set_all_pwm(0, 0);
+	pca->set_all_pwm(0, 0);
+	delete pca;
 
 	digitalWrite(ENA_BCM_PIN, 0);
 	digitalWrite(ENB_BCM_PIN, 0);
@@ -319,12 +320,11 @@ void onPacket(sbus_packet_t packet){
 	
     if (PWM < 0) PWM = 0;
 	int PCA_PWM = (int)((max_PCA_val*1.0/100)*PWM);
+	
+	pca->set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);
 
-    pca.set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);
-
-    
-    //greater than this, and the switch is active (condition satisfied)
-    int FrSky_switch_threshold = 1000;
+	//greater than this, and the switch is active (condition satisfied)
+	int FrSky_switch_threshold = 1000;
 
 	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > FrSky_switch_threshold;
 	bool B_enabled = packet.channels[SA_UP_CHANNEL] > FrSky_switch_threshold;
@@ -334,9 +334,9 @@ void onPacket(sbus_packet_t packet){
 
 	bool drill_on = packet.channels[SD_ON_CHANNEL] > FrSky_switch_threshold;
 	if (drill_on){
-		pca.set_pwm(PWM_CHANNEL_DRILL, 0, max_PCA_val);
+		pca->set_pwm(PWM_CHANNEL_DRILL, 0, max_PCA_val);
 	} else {
-		pca.set_pwm(PWM_CHANNEL_DRILL, 0, 0);
+		pca->set_pwm(PWM_CHANNEL_DRILL, 0, 0);
 	}
 	
 	const int buf_size = 256;
@@ -411,10 +411,17 @@ int main(int argc, char* argv[])
 	digitalWrite(ENA_BCM_PIN, 1);
 	digitalWrite(ENB_BCM_PIN, 1);
 
-    //1500 Hz is close to the max frequency of the PCA9685
-	pca.set_pwm_freq(1500.0);
-    //turn off PWM
-	pca.set_all_pwm(0, 0);
+	try {
+		pca = new PCA9685{};
+	} catch (...) {
+		fprintf(stderr, "PCA initialization error.\n");
+		exit(-1);
+	}
+
+	//1500 Hz is close to the max frequency of the PCA9685
+	pca->set_pwm_freq(1500.0);
+	//turn off PWM
+	pca->set_all_pwm(0, 0);
 
 	arduino_serial_init();
 
