@@ -127,9 +127,11 @@ std::string arduino_stream_buf = "";
 std::fstream log_file;
 
 void arduino_serial_init(){
+
 	//https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/#overview
-    //This will be the only arduino plugged into the Pi,
-    //which is an assumption, but an accurate one.
+	//This will be the only arduino plugged into the Pi,
+	//which is an assumption, but an accurate one.
+	
 	arduino_serial_fd = open("/dev/ttyACM0", O_RDWR);
 	if (arduino_serial_fd < 0){
 		fprintf(stderr, "Arduino serial port open error %i\n", errno);
@@ -185,6 +187,7 @@ void arduino_serial_init(){
 }
 
 void log_file_init(std::string filename){
+
 	log_file.open(filename, std::ios::out);
 	if (!log_file){
 		fprintf(stderr, "Cannot open log file for writing at %s\n", filename.c_str());
@@ -301,24 +304,37 @@ void onPacket(sbus_packet_t packet){
 			packet.failsafe ? "active" : "inactive"
 		);
 		printf("\n");
-        static int value = 0;
+		static int value = 0;
 		send_sensor_cmd(0x5958, value++);
 		send_sensor_cmd(0x5900, value/10);
     	}*/
 
 	//set LED PWM to the adjusted value of packet.channels[0]
+	
+	//max and min PWM % (out of 100) for the actuator to take on
 	int max_PWM = 25;
 	int min_PWM = 0;
+	
+	//max and min throttle values that the controller will give us.
+	//The min has been set to the middle value since this is the resting position of the throttle.
 	int max_throttle = 1811;
 	int nominal_throttle = 992;
-    int max_PCA_val = 4095;
 	
-    int PWM = (int)(
-			((max_PWM - min_PWM)*1.0/(max_throttle - nominal_throttle))*
-			(packet.channels[RIGHT_THROTTLE_CHANNEL] - nominal_throttle)
-			);
+	//The PCA9685 uses this value as a maxinum clock count per PWM pulse: 
+	//setting 'on' to 0 (the start of the pulse time) 
+	//and 'off' to this value 
+	//will result in a 100% duty cycle.
+	int max_PCA_val = 4095;
 	
-    if (PWM < 0) PWM = 0;
+	//range: -max to +max PWM for actuator
+	int PWM = (int)(
+		((max_PWM - min_PWM)*1.0/(max_throttle - nominal_throttle))*
+		(packet.channels[RIGHT_THROTTLE_CHANNEL] - nominal_throttle)
+		);
+	
+	if (PWM < 0) PWM = 0;
+	
+	//adjust for PCA
 	int PCA_PWM = (int)((max_PCA_val*1.0/100)*PWM);
 	
 	pca->set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);
@@ -346,23 +362,37 @@ void onPacket(sbus_packet_t packet){
 	if (num_read < 0){
 		fprintf(stderr, "Arduino read error: %d\n", num_read);
 	} else {
-        //append to global read buffer in case packets got split up
+		//append to global read buffer in case packets got split up
 		arduino_stream_buf.append(readbuf, num_read);
-		
-        //index of the very LAST carriage return
+
+		//index of the very LAST carriage return
 		size_t index = arduino_stream_buf.find_last_of('\n');
 		size_t second_to_last = arduino_stream_buf.find_last_of('\n', index-1); 
 		
-        //if both carriage returns were found and make sense
+		//if both carriage returns were found and make sense
 		if (index > 1 && second_to_last != std::string::npos){
-            
+
 			size_t tab_index_2 = arduino_stream_buf.find_last_of('\t', index-1);
 			size_t tab_index_1 = arduino_stream_buf.find_last_of('\t', tab_index_2-1);
 			
             //get numbers as strings first
-			std::string first_num_str = arduino_stream_buf.substr(second_to_last+1, tab_index_1 - second_to_last - 1);
-			std::string second_num_str = arduino_stream_buf.substr(tab_index_1+1, tab_index_2 - tab_index_1 - 1);
-			std::string third_num_str = arduino_stream_buf.substr(tab_index_2+1, index - tab_index_2 - 1);
+			std::string first_num_str = 
+				arduino_stream_buf.substr(
+						second_to_last+1, 
+						tab_index_1 - second_to_last - 1
+						);
+
+			std::string second_num_str = 
+				arduino_stream_buf.substr(
+						tab_index_1+1, 
+						tab_index_2 - tab_index_1 - 1
+						);
+			
+			std::string third_num_str = 
+				arduino_stream_buf.substr(
+						tab_index_2+1, 
+						index - tab_index_2 - 1
+						);
 			//printf("First num: %s; second: %s; third: %s\n", first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
 			
 			int t = 0;
@@ -370,7 +400,7 @@ void onPacket(sbus_packet_t packet){
 			int curr_sense = 0;
 
 			try {
-                //attempt to convert to ints. throws an exception if stoi fails
+				//attempt to convert to ints. throws an exception if stoi fails
 				t = std::stoi(first_num_str);
 				actuator_dist = std::stoi(second_num_str);
 				curr_sense = std::stoi(third_num_str);
@@ -379,17 +409,20 @@ void onPacket(sbus_packet_t packet){
 
 				send_sensor_cmd(ACTUATOR_DIST_SENSOR_ID, actuator_dist);
 				send_sensor_cmd(CURR_SENSE_SENSOR_ID, curr_sense);
-                
-                //write to log file
+				
+				//write to log file
 				log_data(t, actuator_dist, curr_sense);
-                
-                //erase anything before and including this packet
+				
+				//erase anything before and including this packet
 				arduino_stream_buf.erase(0, index);
 			} catch (...){
-				fprintf(stderr, "Could not convert to integers: '%s', '%s'\n", first_num_str.c_str(), second_num_str.c_str());
+				fprintf(stderr, 
+					"Could not convert to integers: '%s', '%s'\n", 
+					first_num_str.c_str(), second_num_str.c_str());
 			}
 		}
-        //garbage collection of global buffer
+
+		//garbage collection of global buffer
 		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
 	}
 
@@ -397,6 +430,7 @@ void onPacket(sbus_packet_t packet){
 
 int main(int argc, char* argv[])
 {
+
 	//use wpi pin numbers
 	//wiringPiSetup();
 	
@@ -434,7 +468,7 @@ int main(int argc, char* argv[])
 
 	std::string log_file_suffix = "";
     
-    const int buf_size = 256;
+	const int buf_size = 256;
 	char timestring_buffer[buf_size];
 	size_t chars_written = std::strftime(timestring_buffer, buf_size, "_%m_%d_%Y__%H_%M_%S", &tm);
 	if (chars_written == 0){
@@ -450,8 +484,8 @@ int main(int argc, char* argv[])
 	//https://www.geeksforgeeks.org/getopt-function-in-c-to-parse-command-line-arguments/
 	int opt;
     
-    const int num_usb_ports = 4;
-    const std::string port_base = "/dev/ttyUSB";
+	const int num_usb_ports = 4;
+	const std::string port_base = "/dev/ttyUSB";
 	std::string arduino_filepath = port_base + std::to_string(0);
 
 	while ((opt = getopt(argc, argv, ":p:n:")) != -1){
@@ -475,49 +509,49 @@ int main(int argc, char* argv[])
 
 	log_file_init(log_filename);
 
-    //this call passes the onPacket fxn pointer to the SBUS
-    //library for sucessful packet callbacks
-    sbus.onPacket(onPacket);
+	//this call passes the onPacket fxn pointer to the SBUS
+	//library for sucessful packet callbacks
+	sbus.onPacket(onPacket);
 
-    sbus_err_t err = sbus.install(arduino_filepath.c_str(), true);
+	sbus_err_t err = sbus.install(arduino_filepath.c_str(), true);
     
-    if (err == SBUS_ERR_OPEN){
-        //loop through /dev/ttyUSB<n> and attempt to find a working USB port
+	if (err == SBUS_ERR_OPEN){
+		//loop through /dev/ttyUSB<n> and attempt to find a working USB port
  
-        printf("Could not open device at %s.\n"
-               "Attempting to find device by searching devices that match %s<n> "
-               "(searching indices from 0 to %d)...\n",
-               arduino_filepath.c_str(), port_base.c_str(), num_usb_ports - 1);
+		printf("Could not open device at %s.\n"
+				"Attempting to find device by searching devices that match %s<n> "
+				"(searching indices from 0 to %d)...\n",
+				arduino_filepath.c_str(), port_base.c_str(), num_usb_ports - 1);
 
-        for (int i = 0; i < num_usb_ports; ++i){
-            std::string port_i = port_base + std::to_string(i);
-            err = sbus.install(port_i.c_str(), true);
-            if (err == SBUS_OK){
-                printf("Found device on %s\n", port_i.c_str());
-                break;
-            }
-        }
-        if (err != SBUS_OK){
-            fprintf(stderr, "Could not find device.\n");
-        }
-    } 
-    
-    if (err != SBUS_OK) {
-        fprintf(stderr, "SBUS install error: %d\n\r", err);
-        return err;
-    }
+		for (int i = 0; i < num_usb_ports; ++i){
+			std::string port_i = port_base + std::to_string(i);
+			err = sbus.install(port_i.c_str(), true);
+			if (err == SBUS_OK){
+				printf("Found device on %s\n", port_i.c_str());
+				break;
+			}
+		}
+		if (err != SBUS_OK){
+			fprintf(stderr, "Could not find device.\n");
+		}
+	}
 
-    std::signal(SIGINT, signalHandler);
+	if (err != SBUS_OK) {
+		fprintf(stderr, "SBUS install error: %d\n\r", err);
+		return err;
+	}
 
-    while ((err = sbus.read()) != SBUS_FAIL)
-    {
-        if (err == SBUS_ERR_DESYNC)
-        {
-        	fprintf(stderr, "SBUS desync\n\r");
-        }
-    }
+	//call this function when SIGINT is received (Ctrl+C, kind of a force quit)
+	std::signal(SIGINT, signalHandler);
 
-    fprintf(stderr, "SBUS error: %d\n\r", err);
+	while ((err = sbus.read()) != SBUS_FAIL) {
+		if (err == SBUS_ERR_DESYNC) {
+			fprintf(stderr, "SBUS desync\n\r");
+		}
+	}
+	
+	fprintf(stderr, "SBUS error: %d\n\r", err);
 
-    return err;
+	return err;
 }
+
