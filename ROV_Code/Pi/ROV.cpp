@@ -218,7 +218,7 @@ void log_data(int t, int dist, int currsense){
 
 
 //called when SIGINT is received (Ctrl+C)
-void signalHandler(int signum) {
+void exitFxn(int signum) {
  
 	pca->set_all_pwm(0, 0);
 	delete pca;
@@ -357,6 +357,13 @@ void onPacket(sbus_packet_t packet){
 		pca->set_pwm(PWM_CHANNEL_DRILL, 0, 0);
 	}
 	
+	//here begins the code for receiving, logging, and sending commands due to:
+	//the analog read pins from the Arduino (curr sense and actuator dist)
+	//the format for the data coming in is:
+	//<t>\t<dist>\t<currsense>\n
+	//where /t is a tab character, \n is a carriage return,
+	//and <t>, <dist>, and <currsense> are the string representations
+	//of the corresponding values.
 	const int buf_size = 256;
 	char readbuf[buf_size];
 	int num_read = read(arduino_serial_fd, &readbuf, buf_size);
@@ -371,7 +378,7 @@ void onPacket(sbus_packet_t packet){
 		size_t index = arduino_stream_buf.find_last_of('\n');
 		size_t second_to_last = arduino_stream_buf.find_last_of('\n', index-1); 
 		
-		//if both carriage returns were found and make sense
+		//if both carriage returns were found
 		if (index > 1 && second_to_last != std::string::npos){
 
 			size_t tab_index_2 = arduino_stream_buf.find_last_of('\t', index-1);
@@ -395,7 +402,8 @@ void onPacket(sbus_packet_t packet){
 						tab_index_2+1, 
 						index - tab_index_2 - 1
 						);
-			//printf("First num: %s; second: %s; third: %s\n", first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
+			//printf("First num: %s; second: %s; third: %s\n",
+			//first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
 			
 			int t = 0;
 			int actuator_dist = 0;
@@ -544,7 +552,7 @@ int main(int argc, char* argv[])
 	}
 
 	//call this function when SIGINT is received (Ctrl+C, kind of a force quit)
-	std::signal(SIGINT, signalHandler);
+	std::signal(SIGINT, exitFxn);
 
 	while ((err = sbus.read()) != SBUS_FAIL) {
 		if (err == SBUS_ERR_DESYNC) {
@@ -553,7 +561,10 @@ int main(int argc, char* argv[])
 	}
 	
 	fprintf(stderr, "SBUS error: %d\n\r", err);
-
+	
+	exitFxn(err);
+	
+	//should not reach this line
 	return err;
 }
 
