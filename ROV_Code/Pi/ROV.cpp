@@ -42,6 +42,17 @@
 #define SA_UP_CHANNEL (4)
 #define SA_DOWN_CHANNEL (5)
 #define SD_ON_CHANNEL (6)
+#define SC_UP_CHANNEL (7)
+#define SC_DOWN_CHANNEL (8)
+
+//Switches:
+//SA: leftmost switch on face of controller (three state stable)
+//SB: just to the right of SA (three state stable)
+//SC: rightmost switch on face of controller (three state stable)
+//SD: left switch on top of controller, sticking out like an antannae. (two state stable)
+//SE: right switch on top of controller, sticking out like an antannae.
+//	(two state springloaded, normally pointing down
+//	but this is registered as "up" in the firmware of the controller)
 
 //sensor commands are the packets that the raspberry pi
 //sends to the arduino to tell it to chenge its internally stored sensor value
@@ -52,24 +63,34 @@
 
 //The Raspberry pi has two pin addressing modes: Wiring pi (WPI), and Broadcom (BCM).
 //BCM is usually better to use.
-#define INA_WPI_PIN (3)
-#define ENA_WPI_PIN (4)
-#define ENB_WPI_PIN (5)
-#define INB_WPI_PIN (6)
+#define DRILL_ACT_INA_WPI_PIN (3)
+#define DRILL_ACT_ENA_WPI_PIN (4)
+#define DRILL_ACT_ENB_WPI_PIN (5)
+#define DRILL_ACT_INB_WPI_PIN (6)
 
 //EN A and EN B are the H bridge enables for path A and B (active high)
 //IN A and IN B are turned on one at a time to indicate the direction of the motor
 
-#define INA_BCM_PIN (22)
-#define ENA_BCM_PIN (23)
-#define ENB_BCM_PIN (24)
-#define INB_BCM_PIN (25)
+#define DRILL_ACT_INA_BCM_PIN (22)
+#define DRILL_ACT_ENA_BCM_PIN (23)
+#define DRILL_ACT_ENB_BCM_PIN (24)
+#define DRILL_ACT_INB_BCM_PIN (25)
+
+#define LEFT_DRIVE_INA_BCM_PIN (4)
+#define LEFT_DRIVE_ENA_BCM_PIN (17)
+#define LEFT_DRIVE_ENB_BCM_PIN (18)
+#define LEFT_DRIVE_INB_BCM_PIN (27)
+
+#define RIGHT_DRIVE_INA_BCM_PIN (13)
+#define RIGHT_DRIVE_ENA_BCM_PIN (12)
+#define RIGHT_DRIVE_ENB_BCM_PIN (5)
+#define RIGHT_DRIVE_INB_BCM_PIN (6)
 
 enum PWM_pins_enum {
 	PWM_CHANNEL_ACTUATOR = 0,
 	PWM_CHANNEL_DRILL,
-	PWM_CHANNEL_2,
-	PWM_CHANNEL_3,
+	PWM_CHANNEL_LEFT_DRIVE,
+	PWM_CHANNEL_RIGHT_DRIVE,
 	
 	PWM_CHANNEL_4,
 	PWM_CHANNEL_5,
@@ -216,13 +237,24 @@ void log_data(int t, int dist, int currsense){
 }
 
 void cleanup(){
+	
 	pca->set_all_pwm(0, 0);
 	delete pca;
 
-	digitalWrite(ENA_BCM_PIN, 0);
-	digitalWrite(ENB_BCM_PIN, 0);
-	digitalWrite(INA_BCM_PIN, 0);
-	digitalWrite(INB_BCM_PIN, 0);
+	digitalWrite(DRILL_ACT_ENA_BCM_PIN, 0);
+	digitalWrite(DRILL_ACT_ENB_BCM_PIN, 0);
+	digitalWrite(DRILL_ACT_INA_BCM_PIN, 0);
+	digitalWrite(DRILL_ACT_INB_BCM_PIN, 0);
+	
+	digitalWrite(LEFT_DRIVE_ENA_BCM_PIN, 0);
+	digitalWrite(LEFT_DRIVE_ENB_BCM_PIN, 0);
+	digitalWrite(LEFT_DRIVE_INA_BCM_PIN, 0);
+	digitalWrite(LEFT_DRIVE_INB_BCM_PIN, 0);
+	
+	digitalWrite(RIGHT_DRIVE_ENA_BCM_PIN, 0);
+	digitalWrite(RIGHT_DRIVE_ENB_BCM_PIN, 0);
+	digitalWrite(RIGHT_DRIVE_INA_BCM_PIN, 0);
+	digitalWrite(RIGHT_DRIVE_INB_BCM_PIN, 0);
 	
 	close(arduino_serial_fd);
 
@@ -315,9 +347,16 @@ void onPacket(sbus_packet_t packet){
 
 	//set LED PWM to the adjusted value of packet.channels[0]
 	
+	//-------------------------------------------------------------------
+	//constants
+	
 	//max and min PWM % (out of 100) for the actuator to take on
-	int max_PWM = 25;
-	int min_PWM = 0;
+	int max_act_PWM = 25;
+	int min_act_PWM = 0;
+	
+	//max and min PWM % (out of 100) for the wheels to take on
+	int max_wheel_PWM = 50;
+	int min_wheel_PWM = 0;
 	
 	//max and min throttle values that the controller will give us.
 	//The min has been set to the middle value since this is the resting position of the throttle.
@@ -330,28 +369,65 @@ void onPacket(sbus_packet_t packet){
 	//will result in a 100% duty cycle.
 	int max_PCA_val = 4095;
 	
+	//greater than this, and the switch is active (condition satisfied)
+	int FrSky_switch_threshold = 1000;
+	
+	//-------------------------------------------------------------------
+	//actuator PWM
+	
 	//range: -max to +max PWM for actuator
-	int PWM = (int)(
-		((max_PWM - min_PWM)*1.0/(max_throttle - nominal_throttle))*
+	int act_PWM = (int)(
+		((max_act_PWM - min_act_PWM)*1.0/(max_throttle - nominal_throttle))*
 		(packet.channels[RIGHT_THROTTLE_CHANNEL] - nominal_throttle)
 		);
 	
-	if (PWM < 0) PWM = 0;
+	if (act_PWM < 0) act_PWM = 0;
 	
 	//adjust for PCA
-	int PCA_PWM = (int)((max_PCA_val*1.0/100)*PWM);
+	int PCA_PWM = (int)((max_PCA_val*1.0/100)*act_PWM);
 	
 	pca->set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);
+	
+	//-------------------------------------------------------------------
+	//wheels PWM
+	
+	int wheel_PWM = (int)(
+		((max_wheel_PWM - min_wheel_PWM)*1.0/(max_throttle - nominal_throttle))*
+		(packet.channels[LEFT_THROTTLE_CHANNEL] - nominal_throttle)
+	);
+	
+	if (wheel_PWM < 0) wheel_PWM = 0;
+	
+	PCA_PWM = (int)((max_PCA_val*1.0/100)*wheel_PWM);
+	
+	pca->set_pwm(PWM_CHANNEL_LEFT_DRIVE, 0, PCA_PWM);
+	pca->set_pwm(PWM_CHANNEL_RIGHT_DRIVE, 0, PCA_PWM);
 
-	//greater than this, and the switch is active (condition satisfied)
-	int FrSky_switch_threshold = 1000;
+	//-------------------------------------------------------------------
+	//enable and direction pins
 
+	//wheels
 	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > FrSky_switch_threshold;
 	bool B_enabled = packet.channels[SA_UP_CHANNEL] > FrSky_switch_threshold;
 
-	digitalWrite(INA_BCM_PIN, A_enabled);
-	digitalWrite(INB_BCM_PIN, B_enabled);
+	digitalWrite(LEFT_DRIVE_INA_BCM_PIN, A_enabled);
+	digitalWrite(LEFT_DRIVE_INB_BCM_PIN, B_enabled);
+	
+	//switched! cause they're on opposite sides
+	digitalWrite(RIGHT_DRIVE_INB_BCM_PIN, A_enabled);
+	digitalWrite(RIGHT_DRIVE_INA_BCM_PIN, B_enabled);
+	
+	
+	//actuator/drill
+	A_enabled = packet.channels[SC_DOWN_CHANNEL] > FrSky_switch_threshold;
+	B_enabled = packet.channels[SC_UP_CHANNEL] > FrSky_switch_threshold;
 
+	digitalWrite(DRILL_ACT_INA_BCM_PIN, A_enabled);
+	digitalWrite(DRILL_ACT_INB_BCM_PIN, B_enabled);
+
+	//-------------------------------------------------------------------
+	//drill power
+	
 	bool drill_on = packet.channels[SD_ON_CHANNEL] > FrSky_switch_threshold;
 	if (drill_on){
 		pca->set_pwm(PWM_CHANNEL_DRILL, 0, max_PCA_val);
@@ -449,13 +525,29 @@ int main(int argc, char* argv[])
 	//use BCM pin numbers
 	wiringPiSetupGpio();
 
-	pinMode(ENA_BCM_PIN, OUTPUT);
-	pinMode(ENB_BCM_PIN, OUTPUT);
-	pinMode(INA_BCM_PIN, OUTPUT);
-	pinMode(INB_BCM_PIN, OUTPUT);
+	pinMode(DRILL_ACT_ENA_BCM_PIN, OUTPUT);
+	pinMode(DRILL_ACT_ENB_BCM_PIN, OUTPUT);
+	pinMode(DRILL_ACT_INA_BCM_PIN, OUTPUT);
+	pinMode(DRILL_ACT_INB_BCM_PIN, OUTPUT);
+	
+	pinMode(LEFT_DRIVE_ENA_BCM_PIN, OUTPUT);
+	pinMode(LEFT_DRIVE_ENB_BCM_PIN, OUTPUT);
+	pinMode(LEFT_DRIVE_INA_BCM_PIN, OUTPUT);
+	pinMode(LEFT_DRIVE_INB_BCM_PIN, OUTPUT);
+	
+	pinMode(RIGHT_DRIVE_ENA_BCM_PIN, OUTPUT);
+	pinMode(RIGHT_DRIVE_ENB_BCM_PIN, OUTPUT);
+	pinMode(RIGHT_DRIVE_INA_BCM_PIN, OUTPUT);
+	pinMode(RIGHT_DRIVE_INB_BCM_PIN, OUTPUT);
 
-	digitalWrite(ENA_BCM_PIN, 1);
-	digitalWrite(ENB_BCM_PIN, 1);
+	digitalWrite(DRILL_ACT_ENA_BCM_PIN, 1);
+	digitalWrite(DRILL_ACT_ENB_BCM_PIN, 1);
+	
+	digitalWrite(LEFT_DRIVE_ENA_BCM_PIN, 1);
+	digitalWrite(LEFT_DRIVE_ENB_BCM_PIN, 1);
+	
+	digitalWrite(RIGHT_DRIVE_ENA_BCM_PIN, 1);
+	digitalWrite(RIGHT_DRIVE_ENB_BCM_PIN, 1);
 
 	try {
 		pca = new PCA9685{};
