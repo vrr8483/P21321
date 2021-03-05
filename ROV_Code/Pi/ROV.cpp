@@ -370,6 +370,8 @@ void onPacket(sbus_packet_t packet){
 	int max_PCA_val = 4095;
 	
 	//greater than this, and the switch is active (condition satisfied)
+	//NOTE: on the controller, for channels meant to be active when a switch is DOWN,
+	//you have to modify the scale to -100 (totally inverted) to make it work with this program.
 	int FrSky_switch_threshold = 1000;
 	
 	//-------------------------------------------------------------------
