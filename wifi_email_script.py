@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 
 import subprocess
 import time
+import sys
 import re
 from datetime import datetime
 
@@ -80,6 +81,8 @@ while(1):
     else:
         time.sleep(5)
     
+    sys.stdout.flush()
+
     wifi_connected_now = check_for_wifi()
     
     if (not wifi_connected_previously) and wifi_connected_now:
