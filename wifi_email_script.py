@@ -24,6 +24,7 @@ def check_for_wifi():
         # print("No wireless networks connected")
         return False
 
+# returns 0 on success, -1 otherwise
 def send_email():
 
     output = subprocess.run(
@@ -34,14 +35,14 @@ def send_email():
             )
     
     #ip_line = subprocess.check_output(('grep', 'ESSID'), stdin=output.stdout)
-    ip_line = re.match(r"inet \d+\.\d+\.\d+\.\d+", output.stdout)
-
-    if ip_line is None or len(ip_line) == 0:
-        print("No IPv4 address found on wlan0.")
-        return;
+    ip_line = re.findall("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", output.stdout)[0]
 
     print(output.stdout)
     print(ip_line)
+    
+    if ip_line is None or len(ip_line) == 0:
+        print("No IPv4 address found on wlan0.")
+        return -1;
 
     now = datetime.now() # current date and time
 
@@ -65,6 +66,8 @@ def send_email():
     server.sendmail(fromaddr, toaddr, text)
     server.quit()
 
+    return 0;
+
 
 wifi_connected_previously = False
 
@@ -80,7 +83,8 @@ while(1):
     wifi_connected_now = check_for_wifi()
     
     if (not wifi_connected_previously) and wifi_connected_now:
-        send_email()
+        if send_email():
+            wifi_connected_now = False
         
     wifi_connected_previously = wifi_connected_now
 		
