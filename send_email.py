@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 
 import subprocess
 import time
+import re
 
 # True if Wifi connected, False otherwise
 def check_for_wifi():
@@ -23,48 +24,58 @@ def check_for_wifi():
         return False
 
 def send_email():
-	
-	output = subprocess.run(
-		['ifconfig','wlan0'],
-		check=True,
-		stdout=subprocess.PIPE,
-		universal_newlines=True
-		)
 
-	print(output.stdout)
+    output = subprocess.run(
+            ['ifconfig','wlan0'],
+            check=True,
+            stdout=subprocess.PIPE,
+            universal_newlines=True
+            )
+    
+    #ip_line = subprocess.check_output(('grep', 'ESSID'), stdin=output.stdout)
+    ip_line = re.match(r"inet \d+\.\d+\.\d+\.\d+", output.stdout)
 
-	fromaddr = "p21321rov@gmail.com"
-	toaddr = "jimbosned@gmail.com"
+    if ip_line is None or len(ip_line) == 0:
+        print("No IPv4 address found on wlan0.")
+        return;
 
-	msg = MIMEMultipart()
-	msg['From'] = fromaddr
-	msg['To'] = toaddr
-	msg['Subject'] = "ROVert found the internet!"
-	body = output.stdout
-	msg.attach(MIMEText(body, 'plain'))
+    print(output.stdout)
+    print(ip_line)
 
-	server = smtplib.SMTP('smtp.gmail.com', 587)
-	server.starttls()
-	server.login(fromaddr, "WNtwht9YxwetGxL")
-	text = msg.as_string()
-	server.sendmail(fromaddr, toaddr, text)
-	server.quit()
+    fromaddr = "p21321rov@gmail.com"
+    toaddr = "jimbosned@gmail.com"
+
+    msg = MIMEMultipart()
+    msg['From'] = fromaddr
+    msg['To'] = toaddr
+    msg['Subject'] = "ROVert found the internet!"
+    body = ip_line
+    msg.attach(MIMEText(body, 'plain'))
+
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(fromaddr, "WNtwht9YxwetGxL")
+    text = msg.as_string()
+    server.sendmail(fromaddr, toaddr, text)
+    server.quit()
 
 
 wifi_connected_previously = False
 
+# send_email()
+
 while(1):
 	
-	if wifi_connected_previously:
-		time.sleep(10)
-	else:
-		time.sleep(5)
+    if wifi_connected_previously:
+        time.sleep(10)
+    else:
+        time.sleep(5)
     
     wifi_connected_now = check_for_wifi()
     
     if (not wifi_connected_previously) and wifi_connected_now:
-		send_email()
-		
-	wifi_connected_previously = wifi_connected_now
+        send_email()
+        
+    wifi_connected_previously = wifi_connected_now
 		
 		
