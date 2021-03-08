@@ -8,6 +8,7 @@ from email.mime.text import MIMEText
 import subprocess
 import time
 import re
+from datetime import datetime
 
 # True if Wifi connected, False otherwise
 def check_for_wifi():
@@ -42,13 +43,18 @@ def send_email():
     print(output.stdout)
     print(ip_line)
 
+    now = datetime.now() # current date and time
+
+    date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
+    print("date and time: ",date_time)	
+
     fromaddr = "p21321rov@gmail.com"
     toaddr = "jimbosned@gmail.com"
 
     msg = MIMEMultipart()
     msg['From'] = fromaddr
     msg['To'] = toaddr
-    msg['Subject'] = "ROVert found the internet!"
+    msg['Subject'] = "ROVert found the internet: " + date_time
     body = ip_line
     msg.attach(MIMEText(body, 'plain'))
 
