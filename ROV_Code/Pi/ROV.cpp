@@ -171,12 +171,14 @@ void arduino_serial_init(){
 	arduino_serial_fd = open("/dev/ttyACM0", O_RDWR);
 	if (arduino_serial_fd < 0){
 		fprintf(stderr, "Arduino serial port open error %i\n", errno);
+		cleanup();
 		exit(errno);
 	}
 
 	termios tty;
 	if(tcgetattr(arduino_serial_fd, &tty) != 0) {
 		fprintf(stderr, "Error %i from tcgetattr\n", errno);
+		cleanup();
 		exit(errno);
 	}
 	
@@ -214,6 +216,7 @@ void arduino_serial_init(){
 
 	if (tcsetattr(arduino_serial_fd, TCSANOW, &tty) != 0) {
 		fprintf(stderr, "Error %i from tcsetattr\n", errno);
+		cleanup();
 		exit(errno);
 	}
 	
@@ -229,6 +232,7 @@ void log_file_init(std::string filename){
 	log_file.open(filename, std::ios::out);
 	if (!log_file){
 		fprintf(stderr, "Cannot open log file for writing at %s\n", filename.c_str());
+		cleanup();
 		exit(-1);
 	}
 }
@@ -531,8 +535,7 @@ void onPacket(sbus_packet_t packet){
 
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]){
 
 	//initialize the GPIO (general purpose in-out) pins for use
 	
@@ -575,6 +578,7 @@ int main(int argc, char* argv[])
 		pca = new PCA9685{};
 	} catch (...) {
 		fprintf(stderr, "PCA initialization error.\n");
+		cleanup();
 		exit(-1);
 	}
 
@@ -599,6 +603,7 @@ int main(int argc, char* argv[])
 	size_t chars_written = std::strftime(timestring_buffer, buf_size, "_%m_%d_%Y__%H_%M_%S", &tm);
 	if (chars_written == 0){
 		fprintf(stderr, "Datetime format failed\n");
+		cleanup();
 		exit(-1);
 	}
 	log_file_suffix += timestring_buffer;
@@ -668,6 +673,7 @@ int main(int argc, char* argv[])
 
 	if (err != SBUS_OK) {
 		fprintf(stderr, "SBUS install error: %d\n\r", err);
+		cleanup();
 		return err;
 	}
 
