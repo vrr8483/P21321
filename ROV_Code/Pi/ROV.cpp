@@ -160,6 +160,9 @@ std::string arduino_stream_buf = "";
 
 std::fstream log_file;
 
+//function declaration for the cleanup function so we can call it from anywhere
+void cleanup();
+
 //Initializes the Arduino serial stream on arduino_serial_fd
 //on error, it aborts the program.
 void arduino_serial_init(){
