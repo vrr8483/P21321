@@ -140,15 +140,28 @@ union sensor_cmd_packet_type {
 	}
 };
 
+//This is the object that represents our interface to the SBUS protocol.
+//SBUS is used for the FrSky controller to pass controls data from the controller
+//to the motor controls systems, normally.
+//In this system, the raspberry pi reads from this signal directly
+//and decodes it using the SBUS library.
 SBUS sbus;
 
+//The PCA object allows us the I2C command interface required to control
+//the PWM signals to the multiple motor drivers
 PCA9685* pca;
 
+//These two are used for interfacing with the Arduino serial stream,
+//which reads the actuator force sensor and distance potentiometer
+//and sends it to the raspberry pi, who then sends it off to the FrSky receiver
+//so that the transmitter can display those values to the user
 int arduino_serial_fd;
 std::string arduino_stream_buf = "";
 
 std::fstream log_file;
 
+//Initializes the Arduino serial stream on arduino_serial_fd
+//on error, it aborts the program.
 void arduino_serial_init(){
 
 	//https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/#overview
@@ -209,6 +222,8 @@ void arduino_serial_init(){
 	tcflush(arduino_serial_fd, TCIFLUSH);
 }
 
+//initializes the log file stream at filename.
+//aborts the program on error
 void log_file_init(std::string filename){
 
 	log_file.open(filename, std::ios::out);
@@ -218,6 +233,7 @@ void log_file_init(std::string filename){
 	}
 }
 
+//logs a timestamped pair of distance and current sense values to the logfile
 void log_data(int t, int dist, int currsense){
 	
 	//need std::chrono for this
@@ -236,6 +252,12 @@ void log_data(int t, int dist, int currsense){
 	log_file << line;
 }
 
+//this function is called whenever the program is about to exit.
+//It turns off the PWM signals and cleans up the PCA object,
+//closes the arduino serial port and log file.
+//It also disables all the motor drivers.
+//This function should be kept up to date with any hardware additions to
+//ensure that if the program isnt running, the motors don't draw any current from the battery.
 void cleanup(){
 	
 	pca->set_all_pwm(0, 0);
@@ -269,26 +291,13 @@ void exitFxn(int signum) {
 	exit(signum);
 }
 
+//updates a sensor value on the Arduino with ID id to new_val
 int send_sensor_cmd(uint16_t id, uint32_t new_val){
+	
 	//send command to sensor
 	sensor_cmd_type cmd;
 	cmd.sensor_id = id;
 	cmd.value = new_val;
-
-	//this stores the packet in big-endian format. 
-	//Raspbian is little-endian, as is Arduino. 
-	//Use endianness_reverse = true (line 6 in 
-	//frsky_arduino.ino as of the time of writing)
-	//to reverse the endianness of the packet inside arduino.
-	/*uint8_t packet_bytes[8];
-	packet_bytes[0] = cmd.header;
-	packet_bytes[1] = cmd.sensor_id >> 8;
-	packet_bytes[2] = cmd.sensor_id & 0xFF;
-	packet_bytes[3] = (cmd.value >> 24) & 0xFF;
-	packet_bytes[4] = (cmd.value >> 16) & 0xFF;
-	packet_bytes[5] = (cmd.value >> 8) & 0xFF;
-	packet_bytes[6] = cmd.value & 0xFF;
-	packet_bytes[7] = cmd.footer;*/
 	
 	sensor_cmd_packet_type sensor_packet;
 	sensor_packet.cmd = cmd;
@@ -312,8 +321,12 @@ int send_sensor_cmd(uint16_t id, uint32_t new_val){
 	return 0;
 }
 
+//Called by the SBUS library whenever a valid SBUS packet is received.
+//This uses the received controller values to write motor driver enable
+//values (to control the direction of the motors)
+//as well as PWM signal duty cycle to control motor speed.
+//It also logs actuator data to a CSV file
 void onPacket(sbus_packet_t packet){
-
 
 	//printf("Callback called\n");
 	//printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
@@ -521,12 +534,15 @@ void onPacket(sbus_packet_t packet){
 int main(int argc, char* argv[])
 {
 
+	//initialize the GPIO (general purpose in-out) pins for use
+	
 	//use wpi pin numbers
 	//wiringPiSetup();
 	
 	//use BCM pin numbers
 	wiringPiSetupGpio();
 
+	//sets all the enable and direction pins to OUTPUT
 	pinMode(DRILL_ACT_ENA_BCM_PIN, OUTPUT);
 	pinMode(DRILL_ACT_ENB_BCM_PIN, OUTPUT);
 	pinMode(DRILL_ACT_INA_BCM_PIN, OUTPUT);
@@ -542,6 +558,7 @@ int main(int argc, char* argv[])
 	pinMode(RIGHT_DRIVE_INA_BCM_PIN, OUTPUT);
 	pinMode(RIGHT_DRIVE_INB_BCM_PIN, OUTPUT);
 
+	//turn on all the enable pins on the motor drivers
 	digitalWrite(DRILL_ACT_ENA_BCM_PIN, 1);
 	digitalWrite(DRILL_ACT_ENB_BCM_PIN, 1);
 	
@@ -551,6 +568,9 @@ int main(int argc, char* argv[])
 	digitalWrite(RIGHT_DRIVE_ENA_BCM_PIN, 1);
 	digitalWrite(RIGHT_DRIVE_ENB_BCM_PIN, 1);
 
+	//Initializes the PCA object. On failure, the constructor throws an exception.
+	//So this statement will catch that exception and abort the program on such an event
+	//Since if it fails, its due to a hardware misconfiguration.
 	try {
 		pca = new PCA9685{};
 	} catch (...) {
@@ -565,7 +585,7 @@ int main(int argc, char* argv[])
 
 	arduino_serial_init();
 
-	
+	//get the current datetime as a string and use it to make a new log file
 	std::time_t t = std::time(nullptr);
 	std::tm tm = *std::localtime(&t);
 
@@ -586,7 +606,7 @@ int main(int argc, char* argv[])
 	
 	std::string log_filename = log_file_path + log_file_prefix + log_file_suffix;
 
-	
+	//getopt uses the command line arguments to set variables in the program
 	//https://www.geeksforgeeks.org/getopt-function-in-c-to-parse-command-line-arguments/
 	int opt;
 	
@@ -597,10 +617,12 @@ int main(int argc, char* argv[])
 	while ((opt = getopt(argc, argv, ":p:n:")) != -1){
 		switch(opt){
 		case 'n':
+			//-n <name> adds a custom name to the log file
 			log_filename = log_file_path + log_file_prefix + optarg + log_file_suffix;
 			printf("Logging to %s\n", log_filename.c_str());
 			break;
 		case 'p':
+			//-p <port> makes this program use <port> for the arduino serial stream
 			printf("Using port: %s\n", optarg);
 			arduino_filepath = optarg;	
 			break;
@@ -616,9 +638,11 @@ int main(int argc, char* argv[])
 	log_file_init(log_filename);
 
 	//this call passes the onPacket fxn pointer to the SBUS
-	//library for sucessful packet callbacks
+	//library for successful packet callbacks
 	sbus.onPacket(onPacket);
 
+	//Attempt to 'install' the SBUS object, which just consists of opening a serial
+	//port to the FrSky receiver. It returns SBUS_OK on success.
 	sbus_err_t err = sbus.install(arduino_filepath.c_str(), true);
 	
 	if (err == SBUS_ERR_OPEN){
