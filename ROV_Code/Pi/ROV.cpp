@@ -20,9 +20,11 @@
 #include <wiringPi.h>
 
 //SBUS protocol
+//https://github.com/Carbon225/raspberry-sbus
 #include "SBUS.h"
 
 //I2C PWM hat controls
+//https://github.com/barulicm/PiPCA9685
 #include "PCA9685.h"
 
 //uncomment if using timing stuff
