@@ -23,6 +23,7 @@ COMPILE_CMD = $(CC) $(CPPFLAGS) $(LIBS)
 $(PROG) : $(OBJS)
 	$(COMPILE_CMD) $^ -o $@
 
+.PHONY: all clean help
 all: $(PROG)
 
 clean:
