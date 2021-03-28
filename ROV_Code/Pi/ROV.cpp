@@ -157,6 +157,7 @@ PCA9685* pca;
 //which reads the actuator force sensor and distance potentiometer
 //and sends it to the raspberry pi, who then sends it off to the FrSky receiver
 //so that the transmitter can display those values to the user
+//TODO: switch this to a file stream and add CSV file input simulation (Vic)
 int arduino_serial_fd;
 std::string arduino_stream_buf = "";
 
@@ -470,6 +471,8 @@ void onPacket(sbus_packet_t packet){
 	char readbuf[buf_size];
 	int num_read = read(arduino_serial_fd, &readbuf, buf_size);
 
+	//TODO: log every data point, only send sensor commands for most recent
+	//TODO: add data analysis
 	if (num_read < 0){
 		fprintf(stderr, "Arduino read error: %d\n", num_read);
 	} else {
@@ -550,6 +553,7 @@ int main(int argc, char* argv[]){
 	//use BCM pin numbers
 	wiringPiSetupGpio();
 
+	//TODO: Monitor EN pins and handle faults
 	//sets all the enable and direction pins to OUTPUT
 	pinMode(DRILL_ACT_ENA_BCM_PIN, OUTPUT);
 	pinMode(DRILL_ACT_ENB_BCM_PIN, OUTPUT);
