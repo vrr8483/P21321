@@ -16,6 +16,9 @@
 //serial port interface capabilities
 #include <termios.h>
 
+//resizeable arrays (std::vector)
+#include <vector>
+
 //GPIO manipulation (digitalWrite)
 #include <wiringPi.h>
 
@@ -160,6 +163,14 @@ PCA9685* pca;
 //TODO: switch this to a file stream and add CSV file input simulation (Vic)
 int arduino_serial_fd;
 std::string arduino_stream_buf = "";
+
+struct drill_data_point_struct{
+	int t;
+	int actuator_dist;
+	int curr_sense;
+};
+
+std::vector<drill_data_point_struct> drill_data;
 
 std::fstream log_file;
 
@@ -479,9 +490,7 @@ void onPacket(sbus_packet_t packet){
 		arduino_stream_buf.append(readbuf, num_read);
 		
 		//only set after all three values are successfully converted, guaranteed to have valid and related values
-		int valid_t = 0;
-		int valid_actuator_dist = 0;
-		int valid_curr_sense = 0;
+		drill_data_point_struct valid_data;
 		bool valid_values_found = false;
 		
 		while(true){
@@ -530,9 +539,9 @@ void onPacket(sbus_packet_t packet){
 					actuator_dist = std::stoi(second_num_str);
 					curr_sense = std::stoi(third_num_str);
 					
-					valid_t = t;
-					valid_actuator_dist = actuator_dist;
-					valid_curr_sense = curr_sense;
+					valid_data.t = t;
+					valid_data.actuator_dist = actuator_dist;
+					valid_data.curr_sense = curr_sense;
 					valid_values_found = true;
 
 					//printf("t: %d; D: %d; C: %d\n", t, actuator_dist, curr_sense);
@@ -554,8 +563,8 @@ void onPacket(sbus_packet_t packet){
 		} //end while loop iterating through arduino stream
 		
 		if (valid_values_found){
-			send_sensor_cmd(ACTUATOR_DIST_SENSOR_ID, valid_actuator_dist);
-			send_sensor_cmd(CURR_SENSE_SENSOR_ID, valid_curr_sense);
+			send_sensor_cmd(ACTUATOR_DIST_SENSOR_ID, valid_data.actuator_dist);
+			send_sensor_cmd(CURR_SENSE_SENSOR_ID, valid_data.curr_sense);
 		}
 		
 		//garbage collection of global buffer
