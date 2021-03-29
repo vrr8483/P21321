@@ -471,72 +471,93 @@ void onPacket(sbus_packet_t packet){
 	char readbuf[buf_size];
 	int num_read = read(arduino_serial_fd, &readbuf, buf_size);
 
-	//TODO: log every data point, only send sensor commands for most recent
 	//TODO: add data analysis
 	if (num_read < 0){
 		fprintf(stderr, "Arduino read error: %d\n", num_read);
 	} else {
 		//append to global read buffer in case packets got split up
 		arduino_stream_buf.append(readbuf, num_read);
-
-		//index of the very LAST carriage return
-		size_t index = arduino_stream_buf.find_last_of('\n');
-		size_t second_to_last = arduino_stream_buf.find_last_of('\n', index-1); 
 		
-		//if both carriage returns were found
-		if (index > 1 && second_to_last != std::string::npos){
-
-			size_t tab_index_2 = arduino_stream_buf.find_last_of('\t', index-1);
-			size_t tab_index_1 = arduino_stream_buf.find_last_of('\t', tab_index_2-1);
+		//only set after all three values are successfully converted, guaranteed to have valid and related values
+		int valid_t = 0;
+		int valid_actuator_dist = 0;
+		int valid_curr_sense = 0;
+		bool valid_values_found = false;
+		
+		while(true){
+			//index of the very LAST carriage return
+			//size_t index = arduino_stream_buf.find_last_of('\n');
+			//size_t second_to_last = arduino_stream_buf.find_last_of('\n', index-1);
 			
-			//get numbers as strings first
-			std::string first_num_str = 
-				arduino_stream_buf.substr(
-						second_to_last+1, 
-						tab_index_1 - second_to_last - 1
-						);
-
-			std::string second_num_str = 
-				arduino_stream_buf.substr(
-						tab_index_1+1, 
-						tab_index_2 - tab_index_1 - 1
-						);
+			//index of first and second carriage returns
+			size_t first_cr_indx = arduino_stream_buf.find_first_of('\n');
+			size_t second_cr_indx = arduino_stream_buf.find_last_of('\n', index+1);
 			
-			std::string third_num_str = 
-				arduino_stream_buf.substr(
-						tab_index_2+1, 
-						index - tab_index_2 - 1
-						);
-			//printf("First num: %s; second: %s; third: %s\n",
-			//first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
-			
-			int t = 0;
-			int actuator_dist = 0;
-			int curr_sense = 0;
+			//if both carriage returns were found
+			if (index != std::string::npos && second_to_last != std::string::npos){
 
-			try {
-				//attempt to convert to ints. throws an exception if stoi fails
-				t = std::stoi(first_num_str);
-				actuator_dist = std::stoi(second_num_str);
-				curr_sense = std::stoi(third_num_str);
-
-				//printf("t: %d; D: %d; C: %d\n", t, actuator_dist, curr_sense);
-
-				send_sensor_cmd(ACTUATOR_DIST_SENSOR_ID, actuator_dist);
-				send_sensor_cmd(CURR_SENSE_SENSOR_ID, curr_sense);
+				size_t tab_index_2 = arduino_stream_buf.find_last_of('\t', second_cr_indx-1);
+				size_t tab_index_1 = arduino_stream_buf.find_last_of('\t', tab_index_2-1);
 				
-				//write to log file
-				log_data(t, actuator_dist, curr_sense);
+				//get numbers as strings first
+				std::string first_num_str =
+					arduino_stream_buf.substr(
+							first_cr_indx + 1,
+							tab_index_1 - first_cr_indx - 1
+							);
+
+				std::string second_num_str =
+					arduino_stream_buf.substr(
+							tab_index_1 + 1,
+							tab_index_2 - tab_index_1 - 1
+							);
 				
-				//erase anything before and including this packet
-				arduino_stream_buf.erase(0, index);
-			} catch (...){
-				fprintf(stderr, 
-					"Could not convert to integers: '%s', '%s'\n", 
-					first_num_str.c_str(), second_num_str.c_str());
-			}
+				std::string third_num_str =
+					arduino_stream_buf.substr(
+							tab_index_2 + 1,
+							second_cr_indx - tab_index_2 - 1
+							);
+				//printf("First num: %s; second: %s; third: %s\n",
+				//first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
+				
+				int t = 0;
+				int actuator_dist = 0;
+				int curr_sense = 0;
+
+				try {
+					//attempt to convert to ints. throws an exception if stoi fails
+					t = std::stoi(first_num_str);
+					actuator_dist = std::stoi(second_num_str);
+					curr_sense = std::stoi(third_num_str);
+					
+					valid_t = t;
+					valid_actuator_dist = actuator_dist;
+					valid_curr_sense = curr_sense;
+					valid_values_found = true;
+
+					//printf("t: %d; D: %d; C: %d\n", t, actuator_dist, curr_sense);
+					
+					//write to log file
+					log_data(t, actuator_dist, curr_sense);
+					
+					//erase anything before and including this packet
+					arduino_stream_buf.erase(0, first_cr_indx-1);
+				} catch (...){
+					fprintf(stderr,
+						"Could not convert to integers: '%s', '%s'\n",
+						first_num_str.c_str(), second_num_str.c_str());
+				}
+			} else {
+				//CRs not found, no valid data in stream right now
+				break;
+			} //end stream triplet validity check (if/else)
+		} //end while loop iterating through arduino stream
+		
+		if (valid_values_found){
+			send_sensor_cmd(ACTUATOR_DIST_SENSOR_ID, valid_actuator_dist);
+			send_sensor_cmd(CURR_SENSE_SENSOR_ID, valid_curr_sense);
 		}
-
+		
 		//garbage collection of global buffer
 		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
 	}
