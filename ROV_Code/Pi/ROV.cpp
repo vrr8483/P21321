@@ -491,7 +491,7 @@ void onPacket(sbus_packet_t packet){
 			
 			//index of first and second carriage returns
 			size_t first_cr_indx = arduino_stream_buf.find_first_of('\n');
-			size_t second_cr_indx = arduino_stream_buf.find_last_of('\n', first_cr_indx + 1);
+			size_t second_cr_indx = arduino_stream_buf.find_first_of('\n', first_cr_indx + 1);
 			
 			//if both carriage returns were found
 			if (first_cr_indx != std::string::npos && second_cr_indx != std::string::npos){
