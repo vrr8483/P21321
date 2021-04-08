@@ -40,10 +40,16 @@
 //channels as defined in the profile being used on the transmitter. 
 //these are channel indices, which are 0-indexed, so keep that in 
 //mind since the channels shown on the transmitter start at 1.
+
+//Rudder
 #define LEFT_STEER_CHANNEL (0)
+//Elevation
 #define LEFT_THROTTLE_CHANNEL (1)
+//Throttle
 #define RIGHT_THROTTLE_CHANNEL (2)
+//Ail(?)
 #define RIGHT_STEER_CHANNEL (3)
+
 #define SA_UP_CHANNEL (4)
 #define SA_DOWN_CHANNEL (5)
 #define SD_ON_CHANNEL (6)
@@ -97,7 +103,7 @@ enum PWM_pins_enum {
 	PWM_CHANNEL_LEFT_DRIVE,
 	PWM_CHANNEL_RIGHT_DRIVE,
 	
-	PWM_CHANNEL_4,
+	PWM_CHANNEL_STEER,
 	PWM_CHANNEL_5,
 	PWM_CHANNEL_6,
 	PWM_CHANNEL_7,
@@ -402,6 +408,13 @@ void onPacket(sbus_packet_t packet){
 	//and 'off' to this value 
 	//will result in a 100% duty cycle.
 	int max_PCA_val = 4095;
+
+	int min_servo_angle_deg = -60;
+	int max_servo_angle_deg = 60;
+
+	int min_servo_pulse_width_us = 900;
+	int max_servo_pulse_width_us = 2100;
+	int neutral_servo_pulse_width_us = 0.5*(max_servo_pulse_width_us + min_servo_pulse_width_us);
 	
 	//greater than this, and the switch is active (condition satisfied)
 	//NOTE: on the controller, for channels meant to be active when a switch is DOWN,
@@ -438,6 +451,11 @@ void onPacket(sbus_packet_t packet){
 	
 	pca->set_pwm(PWM_CHANNEL_LEFT_DRIVE, 0, PCA_PWM);
 	pca->set_pwm(PWM_CHANNEL_RIGHT_DRIVE, 0, PCA_PWM);
+
+	//-------------------------------------------------------------------
+	//steering
+	
+	
 
 	//-------------------------------------------------------------------
 	//enable and direction pins
