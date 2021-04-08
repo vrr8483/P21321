@@ -30,9 +30,12 @@
 //https://github.com/barulicm/PiPCA9685
 #include "PCA9685.h"
 
-//uncomment if using timing stuff
-//#include <chrono>
-//using namespace std::chrono;
+//#define PRINT_PACKETS 1
+
+#ifdef PRINT_PACKETS
+#include <chrono>
+using namespace std::chrono;
+#endif
 
 #define SECS_PER_MICROSEC (0.000001)
 
@@ -250,7 +253,7 @@ void arduino_serial_init(){
 	//This will be the only arduino plugged into the Pi,
 	//which is an assumption, but an accurate one.
 	
-	arduino_serial_fd = open("/dev/ttyACM0", O_RDWR);
+	arduino_serial_fd = open("/dev/ttyACM0", O_RDWR | O_NONBLOCK);
 	if (arduino_serial_fd < 0){
 		fprintf(stderr, "Arduino serial port open error %i\n", errno);
 		cleanup();
@@ -497,17 +500,18 @@ void onPacket(sbus_packet_t packet){
 	//printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
 	
 	//need std::chrono for this
-	//milliseconds period = milliseconds(100);
-	/*static milliseconds lastms = duration_cast<milliseconds>(
+#ifdef PRINT_PACKETS
+	milliseconds period = milliseconds(100);
+	static milliseconds lastms = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()
-			);*/
-	/*milliseconds ms = duration_cast<milliseconds>(
+			);
+	milliseconds ms = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()
-			);*/
+			);
 
-	/*if (ms - lastms > period){
+	if (ms - lastms > period){
 		lastms = ms;
-		lastPrint = now;
+		//lastPrint = now;
 		for (int c = 0; c < 16; ++c){
 			printf("ch%d: %u\t", c+1, packet.channels[c]);
 		}
@@ -518,10 +522,11 @@ void onPacket(sbus_packet_t packet){
 			packet.failsafe ? "active" : "inactive"
 		);
 		printf("\n");
-		static int value = 0;
-		send_sensor_cmd(0x5958, value++);
-		send_sensor_cmd(0x5900, value/10);
-		}*/
+		//static int value = 0;
+		//send_sensor_cmd(0x5958, value++);
+		//send_sensor_cmd(0x5900, value/10);
+	}
+#endif
 
 	//set LED PWM to the adjusted value of packet.channels[0]
 	
@@ -564,13 +569,23 @@ void onPacket(sbus_packet_t packet){
 	//-------------------------------------------------------------------
 	//steering
 	
+	//static int counter = 0;
+	//counter++;
+	//printf("%d: ", counter);
+
+	//printf("servo convert slope: %f\t ", servo_convert_slope);
+       	//printf("min throttle: %d\t min servo PCA val: %d\t", min_throttle, min_servo_PCA_val);	
+	
 	int steering_val = packet.channels[RIGHT_STEER_CHANNEL];
+	//printf("Steering val: %d\t ", steering_val);
 	
 	//y = m(x - x1) + y1
 	int servo_PCA = servo_convert_slope*(steering_val - min_throttle) + min_servo_PCA_val;
-	
-	pca->set_pwm(PWM_CHANNEL_STEER, 0, servo_PCA);
+	//printf("servo PCA: %d\n", servo_PCA);
+	//fflush(stdout);
 
+	pca->set_pwm(PWM_CHANNEL_STEER, 0, servo_PCA);
+	
 	//-------------------------------------------------------------------
 	//enable and direction pins
 
@@ -612,7 +627,9 @@ void onPacket(sbus_packet_t packet){
 	//of the corresponding values.
 	const int buf_size = 256;
 	char readbuf[buf_size];
+	//printf("Reading from Arduino...\n");
 	int num_read = read(arduino_serial_fd, &readbuf, buf_size);
+	//printf("Done!\n");
 
 	//TODO: add data analysis
 	if (num_read < 0){
@@ -683,7 +700,7 @@ void onPacket(sbus_packet_t packet){
 					log_data(valid_data);
 					
 					//erase anything before and including this packet
-					arduino_stream_buf.erase(0, first_cr_indx-1);
+					arduino_stream_buf.erase(0, second_cr_indx-1);
 				} catch (...){
 					fprintf(stderr,
 						"Could not convert to integers: '%s', '%s'\n",
@@ -703,7 +720,6 @@ void onPacket(sbus_packet_t packet){
 		//garbage collection of global buffer
 		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
 	}
-
 }
 
 int main(int argc, char* argv[]){
