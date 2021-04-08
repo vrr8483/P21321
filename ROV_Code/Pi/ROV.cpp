@@ -115,6 +115,14 @@ enum PWM_pins_enum {
 	num_PWM_channels
 };
 
+enum ice_safety_status_enum {
+	ICE_UNSAFE = 0,
+	ICE_SAFE,
+	INCONCLUSIVE,
+	
+	num_ice_safety_status_enums
+};
+
 struct sensor_cmd_type {
 	uint8_t header = SENSOR_CMD_HEADER;
 	uint16_t sensor_id;
@@ -145,6 +153,12 @@ union sensor_cmd_packet_type {
 	}
 };
 
+struct drill_data_point_struct{
+	int t;
+	int actuator_dist;
+	int curr_sense;
+};
+
 //This is the object that represents our interface to the SBUS protocol.
 //SBUS is used for the FrSky controller to pass controls data from the controller
 //to the motor controls systems, normally.
@@ -163,12 +177,6 @@ PCA9685* pca;
 //TODO: switch this to a file stream and add CSV file input simulation (Vic)
 int arduino_serial_fd;
 std::string arduino_stream_buf = "";
-
-struct drill_data_point_struct{
-	int t;
-	int actuator_dist;
-	int curr_sense;
-};
 
 std::vector<drill_data_point_struct> drill_data;
 
@@ -255,7 +263,7 @@ void log_file_init(std::string filename){
 }
 
 //logs a timestamped pair of distance and current sense values to the logfile
-void log_data(int t, int dist, int currsense){
+void log_data(drill_data_point_struct data_point){
 	
 	//need std::chrono for this
 	/*static milliseconds first_log_time = duration_cast<milliseconds>(
@@ -268,8 +276,11 @@ void log_data(int t, int dist, int currsense){
 	
 	uint64_t diff_ms = (now - first_log_time).count();*/
 
-	std::string line = "";
-	line += std::to_string(t) + "," + std::to_string(dist) + "," + std::to_string(currsense) + '\n';
+	std::string line =
+		std::to_string(data_point.t) + "," +
+		std::to_string(data_point.actuator_dist) + "," +
+		std::to_string(data_point.curr_sense) + '\n';
+	
 	log_file << line;
 }
 
@@ -340,6 +351,82 @@ int send_sensor_cmd(uint16_t id, uint32_t new_val){
 		return -1;
 	}
 	return 0;
+}
+
+//reads the globally-allocated data vector and determines if the ice is safe or not.
+//returns:
+//	ICE_SAFE is ice is safe
+//	ICE_UNSAFE if ice is NOT safe
+//	INCONCLUSIVE on error, or if no determination can be made.
+ice_safety_status_enum ice_safe(){
+		
+	int i;
+	for (i = 0; i < drill_data.size(); ++i){
+		drill_data_point_struct data_point = drill_data.at(i);
+		//find when the drill starts moving at all first
+		if (data_point.actuator_dist > 0){
+			break;
+		}
+	}
+	
+	const int moving_avg_period = 5; //samples, about 1 sample per 100 msecs
+	
+	//not enough data to determine drill movement
+	if (i + moving_avg_period > drill_data.size()) return INCONCLUSIVE;
+	
+	//determine a nominal current draw value based on an assumed 0.5 sec of drill movement w/ no ice resistance
+	double avg_nominal_currsense = 0;
+	for (int j = i; j < i + moving_avg_period; ++j){
+		drill_data_point_struct data_point = drill_data.at(j);
+		
+		avg_nominal_currsense += data_point.curr_sense;
+	}
+	avg_nominal_currsense = avg_nominal_currsense/(1.0*moving_avg_period);
+	
+	i += moving_avg_period; //jump ahead to next value
+	
+	//more than this ratio above the nominal current sense value and it triggers ice detection.
+	float ratio_threshold_ice = 1.3;
+	
+	//less than this ratio above the nominal current sense value means the ice is gone.
+	float ratio_threshold_normal = 1.1;
+	
+	float enter_ice_threshold = avg_nominal_currsense * ratio_threshold_ice;
+	float exit_ice_threshold = avg_nominal_currsense * ratio_threshold_normal;
+	
+	int ice_start_pos = -1;
+	int ice_end_pos = -1;
+	
+	//find when the ice starts
+	for (; i < drill_data.size(); ++i){
+		drill_data_point_struct data_point = drill_data.at(i);
+		
+		if (data_point.curr_sense > enter_ice_threshold){
+			ice_start_pos = i;
+			break;
+		}
+	}
+	
+	//no ice yet found
+	if (ice_start_pos == -1) return INCONCLUSIVE;
+	
+	//find when the ice ends
+	for (; i < drill_data.size(); ++i){
+		drill_data_point_struct data_point = drill_data.at(i);
+		
+		if (data_point.curr_sense > enter_ice_threshold){
+			ice_end_pos = i;
+			break;
+		}
+	}
+	
+	//no ice end found
+	if (ice_end_pos == -1) return INCONCLUSIVE;
+	
+	int ice_thickness_actuator = ice_end_pos - ice_start_pos;
+	
+	//TODO: find the actuator stroke length value ratio
+	return ICE_UNSAFE;
 }
 
 //Called by the SBUS library whenever a valid SBUS packet is received.
@@ -545,9 +632,10 @@ void onPacket(sbus_packet_t packet){
 					valid_values_found = true;
 
 					//printf("t: %d; D: %d; C: %d\n", t, actuator_dist, curr_sense);
+					//TODO: get and report ice safety
 					
 					//write to log file
-					log_data(t, actuator_dist, curr_sense);
+					log_data(valid_data);
 					
 					//erase anything before and including this packet
 					arduino_stream_buf.erase(0, first_cr_indx-1);
