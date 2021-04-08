@@ -34,6 +34,8 @@
 //#include <chrono>
 //using namespace std::chrono;
 
+#define SECS_PER_MICROSEC (0.000001)
+
 #define ACTUATOR_DIST_SENSOR_ID (0x5900)
 #define CURR_SENSE_SENSOR_ID (0x5958)
 
@@ -187,6 +189,55 @@ std::string arduino_stream_buf = "";
 std::vector<drill_data_point_struct> drill_data;
 
 std::fstream log_file;
+
+//-------------------------------------------------------------------
+//constants
+
+//max and min PWM % (out of 100) for the actuator to take on
+int max_act_PWM = 30;
+int min_act_PWM = 0;
+
+//max and min PWM % (out of 100) for the wheels to take on
+int max_wheel_PWM = 50;
+int min_wheel_PWM = 0;
+
+//max and min throttle values that the controller will give us.
+//The min has been set to the middle value since this is the resting position of the throttle.
+int max_throttle = 1811;
+int min_throttle = 172;
+int nominal_throttle = 0.5*(max_throttle + min_throttle) + 1;
+
+//The PCA9685 uses this value as a maxinum clock count per PWM pulse:
+//setting 'on' to 0 (the start of the pulse time)
+//and 'off' to this value
+//will result in a 100% duty cycle.
+int max_PCA_val = 4095;
+
+int min_servo_angle_deg = -60;
+int max_servo_angle_deg = 60;
+
+int min_servo_pulse_width_us = 900;
+int max_servo_pulse_width_us = 2100;
+int neutral_servo_pulse_width_us = 0.5*(max_servo_pulse_width_us + min_servo_pulse_width_us);
+
+double min_servo_pulse_width_s = min_servo_pulse_width_us*SECS_PER_MICROSEC;
+double max_servo_pulse_width_s = max_servo_pulse_width_us*SECS_PER_MICROSEC;
+double neutral_servo_pulse_width_s = neutral_servo_pulse_width_us*SECS_PER_MICROSEC;
+
+double PWM_freq_factor = 1.1;
+
+//the PWM frequency needs to be just low enough to output a pulse width as long as the maximum servo pulse width.
+//(add 10% to ensure that even at that maximum pulse width, the pulse is distinct and not a constant 1)
+double PWM_period = max_servo_pulse_width_s*PWM_freq_factor;
+double PWM_freq = 1.0/PWM_period;
+
+int max_servo_PCA_val = max_PCA_val*( max_servo_pulse_width_s / PWM_period );
+int min_servo_PCA_val = max_PCA_val*( min_servo_pulse_width_s / PWM_period );
+int neutral_servo_PCA_val = 0.5*(max_servo_PCA_val + min_servo_PCA_val);
+
+//m = (y2 - y1)/(x2 - x1)
+double servo_convert_slope = (max_servo_PCA_val - min_servo_PCA_val)*1.0/(max_throttle - min_throttle);
+
 
 //function declaration for the cleanup function so we can call it from anywhere
 void cleanup();
@@ -474,35 +525,6 @@ void onPacket(sbus_packet_t packet){
 
 	//set LED PWM to the adjusted value of packet.channels[0]
 	
-	//-------------------------------------------------------------------
-	//constants
-	
-	//max and min PWM % (out of 100) for the actuator to take on
-	int max_act_PWM = 25;
-	int min_act_PWM = 0;
-	
-	//max and min PWM % (out of 100) for the wheels to take on
-	int max_wheel_PWM = 50;
-	int min_wheel_PWM = 0;
-	
-	//max and min throttle values that the controller will give us.
-	//The min has been set to the middle value since this is the resting position of the throttle.
-	int max_throttle = 1811;
-	int nominal_throttle = 992;
-	
-	//The PCA9685 uses this value as a maxinum clock count per PWM pulse: 
-	//setting 'on' to 0 (the start of the pulse time) 
-	//and 'off' to this value 
-	//will result in a 100% duty cycle.
-	int max_PCA_val = 4095;
-
-	int min_servo_angle_deg = -60;
-	int max_servo_angle_deg = 60;
-
-	int min_servo_pulse_width_us = 900;
-	int max_servo_pulse_width_us = 2100;
-	int neutral_servo_pulse_width_us = 0.5*(max_servo_pulse_width_us + min_servo_pulse_width_us);
-	
 	//greater than this, and the switch is active (condition satisfied)
 	//NOTE: on the controller, for channels meant to be active when a switch is DOWN,
 	//you have to modify the scale to -100 (totally inverted) to make it work with this program.
@@ -542,7 +564,12 @@ void onPacket(sbus_packet_t packet){
 	//-------------------------------------------------------------------
 	//steering
 	
+	int steering_val = packet.channels[RIGHT_STEER_CHANNEL];
 	
+	//y = m(x - x1) + y1
+	int servo_PCA = servo_convert_slope*(steering_val - min_throttle) + min_servo_PCA_val;
+	
+	pca->set_pwm(PWM_CHANNEL_STEER, 0, servo_PCA);
 
 	//-------------------------------------------------------------------
 	//enable and direction pins
@@ -727,8 +754,7 @@ int main(int argc, char* argv[]){
 		exit(-1);
 	}
 
-	//1500 Hz is close to the max frequency of the PCA9685
-	pca->set_pwm_freq(1500.0);
+	pca->set_pwm_freq(PWM_freq);
 	//turn off PWM
 	pca->set_all_pwm(0, 0);
 
