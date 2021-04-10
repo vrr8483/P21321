@@ -42,7 +42,9 @@
 using namespace std::chrono;
 #endif
 
+#define SECS_PER_MILLISEC (0.001)
 #define SECS_PER_MICROSEC (0.000001)
+#define MILLISECS_PER_MICROSEC (0.001)
 
 #define ACTUATOR_DIST_SENSOR_ID (0x5900)
 #define CURR_SENSE_SENSOR_ID (0x5958)
@@ -236,12 +238,15 @@ int min_servo_pulse_width_us = 900;
 int max_servo_pulse_width_us = 2100;
 int neutral_servo_pulse_width_us = 0.5*(max_servo_pulse_width_us + min_servo_pulse_width_us);
 
+double min_steering_pulse_width_us = (min_servo_pulse_width_us - neutral_servo_pulse_width_us)*steering_angle_factor + neutral_servo_pulse_width_us;
+double max_steering_pulse_width_us = (max_servo_pulse_width_us - neutral_servo_pulse_width_us)*steering_angle_factor + neutral_servo_pulse_width_us;
+
 double min_servo_pulse_width_s = min_servo_pulse_width_us*SECS_PER_MICROSEC;
 double max_servo_pulse_width_s = max_servo_pulse_width_us*SECS_PER_MICROSEC;
 double neutral_servo_pulse_width_s = neutral_servo_pulse_width_us*SECS_PER_MICROSEC;
 
-double min_steering_pulse_width_s = (min_servo_pulse_width_s - neutral_servo_pulse_width_s)*steering_angle_factor + neutral_servo_pulse_width_s;
-double max_steering_pulse_width_s = (max_servo_pulse_width_s - neutral_servo_pulse_width_s)*steering_angle_factor + neutral_servo_pulse_width_s;
+double min_steering_pulse_width_s = min_steering_pulse_width_us*SECS_PER_MICROSEC;
+double max_steering_pulse_width_s = max_steering_pulse_width_us*SECS_PER_MICROSEC;
 
 
 double PWM_freq_factor = 1.1;
@@ -256,7 +261,7 @@ int min_steering_PCA_val = max_PCA_val*( min_steering_pulse_width_s / PWM_period
 int neutral_steering_PCA_val = 0.5*(max_steering_PCA_val + min_steering_PCA_val);
 
 //m = (y2 - y1)/(x2 - x1)
-double steering_convert_slope = (max_steering_PCA_val - min_steering_PCA_val)*1.0/(max_throttle - min_throttle);
+double steering_convert_slope = (max_steering_pulse_width_us - min_steering_pulse_width_us)*1.0/(max_throttle - min_throttle);
 
 
 //function declaration for the cleanup function so we can call it from anywhere
@@ -626,11 +631,11 @@ void onPacket(sbus_packet_t packet){
 	//printf("Steering val: %d\t ", steering_val);
 	
 	//y = m(x - x1) + y1
-	int steering_PCA = steering_convert_slope*(steering_val - min_throttle) + min_steering_PCA_val;
+	int steering_pulse_width_us = steering_convert_slope*(steering_val - min_throttle) + min_steering_pulse_width_us;
 	//printf("servo PCA: %d\n", servo_PCA);
 	//fflush(stdout);
 
-	pca->set_pwm(PWM_CHANNEL_STEER, 0, steering_PCA);
+	pca->set_pwm_ms(PWM_CHANNEL_STEER, steering_pulse_width_us*MILLISECS_PER_MICROSEC);
 	
 	STOP_TIMER(steering_timer)
 	PRINT_TIMER(steering_timer)
