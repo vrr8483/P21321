@@ -373,9 +373,17 @@ void log_data(drill_data_point_struct data_point){
 //This function should be kept up to date with any hardware additions to
 //ensure that if the program isnt running, the motors don't draw any current from the battery.
 void cleanup(){
-	
-	pca->set_pwm(PWM_CHANNEL_STEER, 0, neutral_steering_PCA_val);
-	usleep(10*PWM_period/SECS_PER_MICROSEC); //wait 10 periods to get the command through
+
+	//uninstall SBUS
+	sbus.~SBUS();
+
+	//This will reset the steering servo to the neutral (straight) position.
+	//WARNING: if the steering mechanism is all connected, this puts a lot of strain on the servo to perform.
+	//Its not a good idea to turn this on while the mechanism is attached.
+	//Use at your own risk.
+	//pca->set_pwm(PWM_CHANNEL_STEER, 0, neutral_steering_PCA_val);
+	//usleep(100000);
+	//wait 0.1 second to get the command through
 	
 	pca->set_all_pwm(0, 0);
 	delete pca;
