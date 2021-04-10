@@ -21,20 +21,22 @@ COMPILE_CMD = $(CC) $(CPPFLAGS) $(LIBS)
 .PHONY: all clean help
 all: $(PROG)
 
-$(BUILD_DIR) : 
-	mkdir -p $(BUILD_DIR)
-
-$(BUILD_DIR)/%.o : %.c $(HEADERS) $(BUILD_DIR)
+$(BUILD_DIR)/%.o : %.c $(HEADERS)
+	mkdir -p $(dir $@)
 	$(COMPILE_CMD) $*.c -c -o $@
 
-$(BUILD_DIR)/%.opp : %.cpp $(HEADERS) $(BUILD_DIR)
+$(BUILD_DIR)/%.opp : %.cpp $(HEADERS)
+	mkdir -p $(dir $@)
 	$(COMPILE_CMD) $*.cpp -c -o $@
 
 $(PROG) : $(OBJS)
+	-./stop_running_ROV.sh
+	@echo "If the line above this one is an ignored error, "
+	@echo "it just means that there was no ROV process in the background to kill. Don't worry about it."
 	$(COMPILE_CMD) $^ -o $@
 
 clean:
-	rm -rf $(OBJS) $(PROG)
+	rm -rf $(BUILD_DIR) $(PROG)
 
 help:
 	echo "make options: all, clean, help"
