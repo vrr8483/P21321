@@ -596,10 +596,12 @@ void onPacket(sbus_packet_t packet){
 	int PCA_PWM;
 	PCA_PWM = (int)((max_PCA_val*1.0/100)*act_PWM);
 	
-	//TODO: only 4 PWM writes are permittable per packet to stay within time constraints (10 ms). 
-	//Use stateful programming to minimize PWM writes.
-	//pca->set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);
-	
+	static int last_act_pwm_val = 0;
+	if (PCA_PWM != last_act_pwm_val){
+		last_act_pwm_val = PCA_PWM;
+		pca->set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);	
+	}
+
 	STOP_TIMER(act_timer)
 	PRINT_TIMER(act_timer)
 	
@@ -617,9 +619,13 @@ void onPacket(sbus_packet_t packet){
 	
 	PCA_PWM = (int)((max_PCA_val*1.0/100)*wheel_PWM);
 	
-	pca->set_pwm(PWM_CHANNEL_LEFT_DRIVE, 0, PCA_PWM);
-	pca->set_pwm(PWM_CHANNEL_RIGHT_DRIVE, 0, PCA_PWM);
-	
+	static int last_drive_pwm_val = 0;
+	if (PCA_PWM != last_drive_pwm_val){
+		last_drive_pwm_val = PCA_PWM;
+		pca->set_pwm(PWM_CHANNEL_LEFT_DRIVE, 0, PCA_PWM);
+		pca->set_pwm(PWM_CHANNEL_RIGHT_DRIVE, 0, PCA_PWM);
+	}
+
 	STOP_TIMER(wheel_timer)
 	PRINT_TIMER(wheel_timer)
 
@@ -642,9 +648,13 @@ void onPacket(sbus_packet_t packet){
 	int steering_pulse_width_us = steering_convert_slope*(steering_val - min_throttle) + min_steering_pulse_width_us;
 	//printf("servo PCA: %d\n", servo_PCA);
 	//fflush(stdout);
-
-	pca->set_pwm_ms(PWM_CHANNEL_STEER, steering_pulse_width_us*MILLISECS_PER_MICROSEC);
 	
+	static int last_steer = 0;
+	if (steering_pulse_width_us != last_steer){
+		last_steer = steering_pulse_width_us;
+		pca->set_pwm_ms(PWM_CHANNEL_STEER, steering_pulse_width_us*MILLISECS_PER_MICROSEC);
+	}
+
 	STOP_TIMER(steering_timer)
 	PRINT_TIMER(steering_timer)
 	
@@ -681,9 +691,10 @@ void onPacket(sbus_packet_t packet){
 	START_TIMER(drill_timer)
 	
 	bool drill_on = packet.channels[SD_ON_CHANNEL] > FrSky_switch_threshold;
-	if (drill_on){
+	static bool drill_on_last_time = !drill_on;
+	if (drill_on && !drill_on_last_time){
 		pca->set_pwm(PWM_CHANNEL_DRILL, 0, max_PCA_val);
-	} else {
+	} else if (!drill_on && drill_on_last_time) {
 		pca->set_pwm(PWM_CHANNEL_DRILL, 0, 0);
 	}
 	
