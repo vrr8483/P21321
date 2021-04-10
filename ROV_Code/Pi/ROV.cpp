@@ -32,7 +32,7 @@
 
 //Used in timing onPacket()
 //comment out EN_TIME to disable the timers
-#define EN_TIME 1
+//#define EN_TIME 1
 #include "Timers.h"
 
 //#define PRINT_PACKETS 1
@@ -226,8 +226,8 @@ int min_servo_angle_deg = -60;
 int max_servo_angle_deg = 60;
 
 //how far the steering nechanism can turn
-int max_steering_angle_deg = 20;
-int min_steering_angle_deg = -20;
+int max_steering_angle_deg = 32;
+int min_steering_angle_deg = -32;
 
 //ASSUMPTION: both sets of angles above are symetrical (max and min have same magnitude)
 double steering_angle_factor = max_steering_angle_deg*1.0/max_servo_angle_deg;
@@ -514,6 +514,7 @@ ice_safety_status_enum ice_safe(){
 //values (to control the direction of the motors)
 //as well as PWM signal duty cycle to control motor speed.
 //It also logs actuator data to a CSV file
+DECLARE_TIMER(dummy_timer)
 DECLARE_TIMER(act_timer)
 DECLARE_TIMER(wheel_timer)
 DECLARE_TIMER(steering_timer)
@@ -561,6 +562,11 @@ void onPacket(sbus_packet_t packet){
 	//you have to modify the scale to -100 (totally inverted) to make it work with this program.
 	int FrSky_switch_threshold = 1000;
 	
+	START_TIMER(dummy_timer)
+	//nothing
+	STOP_TIMER(dummy_timer)
+	PRINT_TIMER(dummy_timer)
+
 	//-------------------------------------------------------------------
 	//actuator PWM
 	START_TIMER(act_timer)
@@ -574,9 +580,12 @@ void onPacket(sbus_packet_t packet){
 	if (act_PWM < 0) act_PWM = 0;
 	
 	//adjust for PCA
-	int PCA_PWM = (int)((max_PCA_val*1.0/100)*act_PWM);
+	int PCA_PWM;
+	PCA_PWM = (int)((max_PCA_val*1.0/100)*act_PWM);
 	
-	pca->set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);
+	//TODO: only 4 PWM writes are permittable per packet to stay within time constraints (10 ms). 
+	//Use stateful programming to minimize PWM writes.
+	//pca->set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);
 	
 	STOP_TIMER(act_timer)
 	PRINT_TIMER(act_timer)
