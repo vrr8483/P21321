@@ -216,8 +216,16 @@ int nominal_throttle = 0.5*(max_throttle + min_throttle) + 1;
 //will result in a 100% duty cycle.
 int max_PCA_val = 4095;
 
+//how far the servo can physically turn
 int min_servo_angle_deg = -60;
 int max_servo_angle_deg = 60;
+
+//how far the steering nechanism can turn
+int max_steering_angle_deg = 20;
+int min_steering_angle_deg = -20;
+
+//ASSUMPTION: both sets of angles above are symetrical (max and min have same magnitude)
+double steering_angle_factor = max_steering_angle_deg*1.0/max_servo_angle_deg;
 
 int min_servo_pulse_width_us = 900;
 int max_servo_pulse_width_us = 2100;
@@ -227,19 +235,23 @@ double min_servo_pulse_width_s = min_servo_pulse_width_us*SECS_PER_MICROSEC;
 double max_servo_pulse_width_s = max_servo_pulse_width_us*SECS_PER_MICROSEC;
 double neutral_servo_pulse_width_s = neutral_servo_pulse_width_us*SECS_PER_MICROSEC;
 
+double min_steering_pulse_width_s = (min_servo_pulse_width_s - neutral_servo_pulse_width_s)*steering_angle_factor + neutral_servo_pulse_width_s;
+double max_steering_pulse_width_s = (max_servo_pulse_width_s - neutral_servo_pulse_width_s)*steering_angle_factor + neutral_servo_pulse_width_s;
+
+
 double PWM_freq_factor = 1.1;
 
 //the PWM frequency needs to be just low enough to output a pulse width as long as the maximum servo pulse width.
 //(add 10% to ensure that even at that maximum pulse width, the pulse is distinct and not a constant 1)
-double PWM_period = max_servo_pulse_width_s*PWM_freq_factor;
+double PWM_period = max_steering_pulse_width_s*PWM_freq_factor;
 double PWM_freq = 1.0/PWM_period;
 
-int max_servo_PCA_val = max_PCA_val*( max_servo_pulse_width_s / PWM_period );
-int min_servo_PCA_val = max_PCA_val*( min_servo_pulse_width_s / PWM_period );
-int neutral_servo_PCA_val = 0.5*(max_servo_PCA_val + min_servo_PCA_val);
+int max_steering_PCA_val = max_PCA_val*( max_steering_pulse_width_s / PWM_period );
+int min_steering_PCA_val = max_PCA_val*( min_steering_pulse_width_s / PWM_period );
+int neutral_steering_PCA_val = 0.5*(max_steering_PCA_val + min_steering_PCA_val);
 
 //m = (y2 - y1)/(x2 - x1)
-double servo_convert_slope = (max_servo_PCA_val - min_servo_PCA_val)*1.0/(max_throttle - min_throttle);
+double steering_convert_slope = (max_steering_PCA_val - min_steering_PCA_val)*1.0/(max_throttle - min_throttle);
 
 
 //function declaration for the cleanup function so we can call it from anywhere
@@ -351,6 +363,9 @@ void log_data(drill_data_point_struct data_point){
 //This function should be kept up to date with any hardware additions to
 //ensure that if the program isnt running, the motors don't draw any current from the battery.
 void cleanup(){
+	
+	pca->set_pwm(PWM_CHANNEL_STEER, 0, neutral_steering_PCA_val);
+	usleep(10*PWM_period/SECS_PER_MICROSEC); //wait 10 periods to get the command through
 	
 	pca->set_all_pwm(0, 0);
 	delete pca;
@@ -580,11 +595,11 @@ void onPacket(sbus_packet_t packet){
 	//printf("Steering val: %d\t ", steering_val);
 	
 	//y = m(x - x1) + y1
-	int servo_PCA = servo_convert_slope*(steering_val - min_throttle) + min_servo_PCA_val;
+	int steering_PCA = steering_convert_slope*(steering_val - min_throttle) + min_steering_PCA_val;
 	//printf("servo PCA: %d\n", servo_PCA);
 	//fflush(stdout);
 
-	pca->set_pwm(PWM_CHANNEL_STEER, 0, servo_PCA);
+	pca->set_pwm(PWM_CHANNEL_STEER, 0, steering_PCA);
 	
 	//-------------------------------------------------------------------
 	//enable and direction pins
@@ -625,6 +640,7 @@ void onPacket(sbus_packet_t packet){
 	//where /t is a tab character, \n is a carriage return,
 	//and <t>, <dist>, and <currsense> are the string representations
 	//of the corresponding values.
+	/*
 	const int buf_size = 256;
 	char readbuf[buf_size];
 	//printf("Reading from Arduino...\n");
@@ -720,6 +736,7 @@ void onPacket(sbus_packet_t packet){
 		//garbage collection of global buffer
 		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
 	}
+	*/
 }
 
 int main(int argc, char* argv[]){
