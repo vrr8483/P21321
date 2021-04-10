@@ -30,6 +30,11 @@
 //https://github.com/barulicm/PiPCA9685
 #include "PCA9685.h"
 
+//Used in timing onPacket()
+//comment out EN_TIME to disable the timers
+#define EN_TIME 1
+#include "Timers.h"
+
 //#define PRINT_PACKETS 1
 
 #ifdef PRINT_PACKETS
@@ -509,8 +514,11 @@ ice_safety_status_enum ice_safe(){
 //values (to control the direction of the motors)
 //as well as PWM signal duty cycle to control motor speed.
 //It also logs actuator data to a CSV file
+DECLARE_TIMER(A)
 void onPacket(sbus_packet_t packet){
-
+	
+	START_TIMER(A)
+	
 	//printf("Callback called\n");
 	//printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
 	
@@ -737,6 +745,8 @@ void onPacket(sbus_packet_t packet){
 		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
 	}
 	*/
+	STOP_TIMER(A)
+	PRINT_TIMER(A)
 }
 
 int main(int argc, char* argv[]){
