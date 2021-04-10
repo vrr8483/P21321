@@ -420,7 +420,7 @@ int send_sensor_cmd(uint16_t id, uint32_t new_val){
 //	INCONCLUSIVE on error, or if no determination can be made.
 ice_safety_status_enum ice_safe(){
 		
-	int i;
+	unsigned int i;
 	for (i = 0; i < drill_data.size(); ++i){
 		drill_data_point_struct data_point = drill_data.at(i);
 		//find when the drill starts moving at all first
@@ -436,7 +436,7 @@ ice_safety_status_enum ice_safe(){
 	
 	//determine a nominal current draw value based on an assumed 0.5 sec of drill movement w/ no ice resistance
 	double avg_nominal_currsense = 0;
-	for (int j = i; j < i + moving_avg_period; ++j){
+	for (unsigned int j = i; j < i + moving_avg_period; ++j){
 		drill_data_point_struct data_point = drill_data.at(j);
 		
 		avg_nominal_currsense += data_point.curr_sense;
