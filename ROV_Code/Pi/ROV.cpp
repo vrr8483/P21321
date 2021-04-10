@@ -514,10 +514,13 @@ ice_safety_status_enum ice_safe(){
 //values (to control the direction of the motors)
 //as well as PWM signal duty cycle to control motor speed.
 //It also logs actuator data to a CSV file
-DECLARE_TIMER(A)
+DECLARE_TIMER(act_timer)
+DECLARE_TIMER(wheel_timer)
+DECLARE_TIMER(steering_timer)
+DECLARE_TIMER(ED_timer)
+DECLARE_TIMER(drill_timer)
+
 void onPacket(sbus_packet_t packet){
-	
-	START_TIMER(A)
 	
 	//printf("Callback called\n");
 	//printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
@@ -560,6 +563,7 @@ void onPacket(sbus_packet_t packet){
 	
 	//-------------------------------------------------------------------
 	//actuator PWM
+	START_TIMER(act_timer)
 	
 	//range: -max to +max PWM for actuator
 	int act_PWM = (int)(
@@ -574,8 +578,13 @@ void onPacket(sbus_packet_t packet){
 	
 	pca->set_pwm(PWM_CHANNEL_ACTUATOR, 0, PCA_PWM);
 	
+	STOP_TIMER(act_timer)
+	PRINT_TIMER(act_timer)
+	
 	//-------------------------------------------------------------------
 	//wheels PWM
+	
+	START_TIMER(wheel_timer)
 	
 	int wheel_PWM = (int)(
 		((max_wheel_PWM - min_wheel_PWM)*1.0/(max_throttle - nominal_throttle))*
@@ -588,9 +597,14 @@ void onPacket(sbus_packet_t packet){
 	
 	pca->set_pwm(PWM_CHANNEL_LEFT_DRIVE, 0, PCA_PWM);
 	pca->set_pwm(PWM_CHANNEL_RIGHT_DRIVE, 0, PCA_PWM);
+	
+	STOP_TIMER(wheel_timer)
+	PRINT_TIMER(wheel_timer)
 
 	//-------------------------------------------------------------------
 	//steering
+	
+	START_TIMER(steering_timer)
 	
 	//static int counter = 0;
 	//counter++;
@@ -609,8 +623,13 @@ void onPacket(sbus_packet_t packet){
 
 	pca->set_pwm(PWM_CHANNEL_STEER, 0, steering_PCA);
 	
+	STOP_TIMER(steering_timer)
+	PRINT_TIMER(steering_timer)
+	
 	//-------------------------------------------------------------------
 	//enable and direction pins
+	
+	START_TIMER(ED_timer)
 
 	//wheels
 	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > FrSky_switch_threshold;
@@ -630,9 +649,14 @@ void onPacket(sbus_packet_t packet){
 
 	digitalWrite(DRILL_ACT_INA_BCM_PIN, A_enabled);
 	digitalWrite(DRILL_ACT_INB_BCM_PIN, B_enabled);
+	
+	STOP_TIMER(ED_timer)
+	PRINT_TIMER(ED_timer)
 
 	//-------------------------------------------------------------------
 	//drill power
+	
+	START_TIMER(drill_timer)
 	
 	bool drill_on = packet.channels[SD_ON_CHANNEL] > FrSky_switch_threshold;
 	if (drill_on){
@@ -640,6 +664,9 @@ void onPacket(sbus_packet_t packet){
 	} else {
 		pca->set_pwm(PWM_CHANNEL_DRILL, 0, 0);
 	}
+	
+	STOP_TIMER(drill_timer)
+	PRINT_TIMER(drill_timer)
 	
 	//here begins the code for receiving, logging, and sending commands due to:
 	//the analog read pins from the Arduino (curr sense and actuator dist)
@@ -745,8 +772,6 @@ void onPacket(sbus_packet_t packet){
 		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
 	}
 	*/
-	STOP_TIMER(A)
-	PRINT_TIMER(A)
 }
 
 int main(int argc, char* argv[]){
