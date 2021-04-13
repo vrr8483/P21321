@@ -827,8 +827,6 @@ int main(int argc, char* argv[]){
 
 	//TODO: Monitor EN pins and handle faults
 	//sets all the enable and direction pins to OUTPUT
-	pinMode(DRILL_ACT_ENA_BCM_PIN, OUTPUT);
-	pinMode(DRILL_ACT_ENB_BCM_PIN, OUTPUT);
 	
 	pinMode(DRILL_ENA_BCM_PIN, OUTPUT);
 	pinMode(DRILL_ENB_BCM_PIN, OUTPUT);
