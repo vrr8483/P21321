@@ -94,20 +94,24 @@ using namespace std::chrono;
 //EN A and EN B are the H bridge enables for path A and B (active high)
 //IN A and IN B are turned on one at a time to indicate the direction of the motor
 
-#define DRILL_ACT_INA_BCM_PIN (22)
-#define DRILL_ACT_ENA_BCM_PIN (23)
-#define DRILL_ACT_ENB_BCM_PIN (24)
-#define DRILL_ACT_INB_BCM_PIN (25)
-
 #define LEFT_DRIVE_INA_BCM_PIN (4)
 #define LEFT_DRIVE_ENA_BCM_PIN (17)
 #define LEFT_DRIVE_ENB_BCM_PIN (18)
 #define LEFT_DRIVE_INB_BCM_PIN (27)
 
-#define RIGHT_DRIVE_INA_BCM_PIN (13)
-#define RIGHT_DRIVE_ENA_BCM_PIN (12)
-#define RIGHT_DRIVE_ENB_BCM_PIN (6)
-#define RIGHT_DRIVE_INB_BCM_PIN (5)
+#define DRILL_ACT_INA_BCM_PIN (22)
+#define DRILL_ACT_INB_BCM_PIN (23)
+
+#define DRILL_ENA_BCM_PIN (24)
+#define DRILL_ENB_BCM_PIN (25)
+
+#define ACT_ENA_BCM_PIN (5)
+#define ACT_ENB_BCM_PIN (6)
+
+#define RIGHT_DRIVE_INA_BCM_PIN (12)
+#define RIGHT_DRIVE_ENA_BCM_PIN (13)
+#define RIGHT_DRIVE_ENB_BCM_PIN (16)
+#define RIGHT_DRIVE_INB_BCM_PIN (19)
 
 enum PWM_pins_enum {
 	PWM_CHANNEL_ACTUATOR = 0,
@@ -388,8 +392,12 @@ void cleanup(){
 	pca->set_all_pwm(0, 0);
 	delete pca;
 
-	digitalWrite(DRILL_ACT_ENA_BCM_PIN, 0);
-	digitalWrite(DRILL_ACT_ENB_BCM_PIN, 0);
+	digitalWrite(ACT_ENA_BCM_PIN, 0);
+	digitalWrite(ACT_ENB_BCM_PIN, 0);
+	
+	digitalWrite(DRILL_ENA_BCM_PIN, 0);
+	digitalWrite(DRILL_ENB_BCM_PIN, 0);
+	
 	digitalWrite(DRILL_ACT_INA_BCM_PIN, 0);
 	digitalWrite(DRILL_ACT_INB_BCM_PIN, 0);
 	
@@ -821,6 +829,13 @@ int main(int argc, char* argv[]){
 	//sets all the enable and direction pins to OUTPUT
 	pinMode(DRILL_ACT_ENA_BCM_PIN, OUTPUT);
 	pinMode(DRILL_ACT_ENB_BCM_PIN, OUTPUT);
+	
+	pinMode(DRILL_ENA_BCM_PIN, OUTPUT);
+	pinMode(DRILL_ENB_BCM_PIN, OUTPUT);
+	
+	pinMode(ACT_ENA_BCM_PIN, OUTPUT);
+	pinMode(ACT_ENB_BCM_PIN, OUTPUT);
+	
 	pinMode(DRILL_ACT_INA_BCM_PIN, OUTPUT);
 	pinMode(DRILL_ACT_INB_BCM_PIN, OUTPUT);
 	
@@ -835,8 +850,11 @@ int main(int argc, char* argv[]){
 	pinMode(RIGHT_DRIVE_INB_BCM_PIN, OUTPUT);
 
 	//turn on all the enable pins on the motor drivers
-	digitalWrite(DRILL_ACT_ENA_BCM_PIN, 1);
-	digitalWrite(DRILL_ACT_ENB_BCM_PIN, 1);
+	digitalWrite(DRILL_ENA_BCM_PIN, 1);
+	digitalWrite(DRILL_ENB_BCM_PIN, 1);
+	
+	digitalWrite(ACT_ENA_BCM_PIN, 1);
+	digitalWrite(ACT_ENB_BCM_PIN, 1);
 	
 	digitalWrite(LEFT_DRIVE_ENA_BCM_PIN, 1);
 	digitalWrite(LEFT_DRIVE_ENB_BCM_PIN, 1);
