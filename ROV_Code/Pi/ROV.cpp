@@ -35,7 +35,11 @@
 //#define EN_TIME 1
 #include "Timers.h"
 
+//uncomment to have each SBUS packet printed out
 //#define PRINT_PACKETS 1
+
+//uncomment to skip creating/writing to the log file
+#define SKIP_LOGGING 1
 
 #ifdef PRINT_PACKETS
 #include <chrono>
@@ -339,17 +343,20 @@ void arduino_serial_init(){
 //initializes the log file stream at filename.
 //aborts the program on error
 void log_file_init(std::string filename){
-
+#ifndef SKIP_LOGGING
 	log_file.open(filename, std::ios::out);
 	if (!log_file){
 		fprintf(stderr, "Cannot open log file for writing at %s\n", filename.c_str());
 		cleanup();
 		exit(-1);
 	}
+#endif
 }
 
 //logs a timestamped pair of distance and current sense values to the logfile
 void log_data(drill_data_point_struct data_point){
+	
+#ifndef SKIP_LOGGING
 	
 	//need std::chrono for this
 	/*static milliseconds first_log_time = duration_cast<milliseconds>(
@@ -368,6 +375,7 @@ void log_data(drill_data_point_struct data_point){
 		std::to_string(data_point.curr_sense) + '\n';
 	
 	log_file << line;
+#endif
 }
 
 //this function is called whenever the program is about to exit.
@@ -412,8 +420,10 @@ void cleanup(){
 	digitalWrite(RIGHT_DRIVE_INB_BCM_PIN, 0);
 	
 	close(arduino_serial_fd);
-
+	
+#ifndef SKIP_LOGGING
 	log_file.close();
+#endif
 }
 
 //called when SIGINT is received (Ctrl+C)
@@ -716,7 +726,7 @@ void onPacket(sbus_packet_t packet){
 	//where /t is a tab character, \n is a carriage return,
 	//and <t>, <dist>, and <currsense> are the string representations
 	//of the corresponding values.
-	/*
+	
 	const int buf_size = 256;
 	char readbuf[buf_size];
 	//printf("Reading from Arduino...\n");
@@ -812,7 +822,6 @@ void onPacket(sbus_packet_t packet){
 		//garbage collection of global buffer
 		if (arduino_stream_buf.length() > buf_size) arduino_stream_buf.erase();
 	}
-	*/
 }
 
 int main(int argc, char* argv[]){
