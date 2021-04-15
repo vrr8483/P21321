@@ -236,8 +236,8 @@ int min_servo_angle_deg = -60;
 int max_servo_angle_deg = 60;
 
 //how far the steering nechanism can turn
-int max_steering_angle_deg = 32;
-int min_steering_angle_deg = -32;
+int max_steering_angle_deg = 28;
+int min_steering_angle_deg = -28;
 
 //ASSUMPTION: both sets of angles above are symetrical (max and min have same magnitude)
 double steering_angle_factor = max_steering_angle_deg*1.0/max_servo_angle_deg;
@@ -979,6 +979,9 @@ int main(int argc, char* argv[]){
 	
 	//ALSO call this function when SIGTERM is received (system shutdown)
 	std::signal(SIGTERM, exitFxn);
+
+	printf("Started up successfully: %s\n", timestring_buffer);
+	fflush(stdout);
 
 	while ((err = sbus.read()) != SBUS_FAIL) {
 		if (err == SBUS_ERR_DESYNC) {
