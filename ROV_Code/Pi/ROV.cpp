@@ -723,7 +723,7 @@ void onPacket(sbus_packet_t packet){
 	//the analog read pins from the Arduino (curr sense and actuator dist)
 	//the format for the data coming in is:
 	//<t>\t<dist>\t<currsense>\n
-	//where /t is a tab character, \n is a carriage return,
+	//where \t is a tab character, \n is a carriage return,
 	//and <t>, <dist>, and <currsense> are the string representations
 	//of the corresponding values.
 	
