@@ -18,12 +18,15 @@
 PyObject *pName, *pModule, *pFunc;
 PyObject *pArgs, *pValue;
 
+char* fileName = "envelope";
+
+char* funcName_setup = "initialize";
+char* funcName_maincall = "main";
+char* funcName_cleanup = "disconnect";
+
 //call to initialize the python embedded environment.
 //returns: 0 on success, -1 on failure.
 int setup_radar(){
-	
-	char* fileName = "envelope";
-	char* funcName = "main";
 	
 	//Input checks
 	if (fileName == NULL) {
@@ -57,17 +60,34 @@ int setup_radar(){
 		return cleanup_radar();
 	}
 	
-	//Grabs function from file
-	pFunc = PyObject_GetAttrString(pModule, funcName);
+	//Creates a new NULL tuple since no arguments are required
+	pArgs = PyTuple_New(0);
+	
+	//call setup code within python
+	pFunc = PyObject_GetAttrString(pModule, funcName_setup);
 	
 	if (!pFunc || !PyCallable_Check(pFunc)){
 		if (PyErr_Occurred()) PyErr_Print();
-		fprintf(stderr, "Cannot find function \"%s\"\n", funcName);
+		fprintf(stderr, "Cannot find function \"%s\"\n", funcName_setup);
 		return cleanup_radar();
 	}
 	
-	//Creates a new NULL tuple since no arguments are required
-	pArgs = PyTuple_New(0);
+	pValue = PyObject_CallObject(pFunc, pArgs);
+	
+	if (pValue == NULL) {
+		PyErr_Print();
+		fprintf(stderr, "Python setup failed\n");
+		return cleanup_radar();
+	}
+	
+	//set up main call code
+	pFunc = PyObject_GetAttrString(pModule, funcName_maincall);
+	
+	if (!pFunc || !PyCallable_Check(pFunc)){
+		if (PyErr_Occurred()) PyErr_Print();
+		fprintf(stderr, "Cannot find function \"%s\"\n", funcName_maincall);
+		return cleanup_radar();
+	}
 
 	return 0;
 }
@@ -97,6 +117,24 @@ double measure(){
 //Cleans up python session
 //returns: 0 on success, -1 on failure.
 int cleanup_radar(){
+	
+	//call setup code within python
+	pFunc = PyObject_GetAttrString(pModule, funcName_cleanup);
+	
+	if (!pFunc || !PyCallable_Check(pFunc)){
+		
+		if (PyErr_Occurred()) PyErr_Print();
+		fprintf(stderr, "Cannot find function \"%s\"\n", funcName_cleanup);
+		
+	} else {
+	
+		pValue = PyObject_CallObject(pFunc, pArgs);
+	
+		if (pValue == NULL) {
+			PyErr_Print();
+			fprintf(stderr, "Python cleanup failed\n");
+		}
+	}
 	
 	Py_XDECREF(pFunc);
 	Py_XDECREF(pModule);
