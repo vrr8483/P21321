@@ -27,7 +27,7 @@
  * *F*/
 
 double measure(){
-	char* fileName = "envelope.py";
+	char* fileName = "envelope";
 	char* funcName = "main";
 	
     //Initialize python.h data
