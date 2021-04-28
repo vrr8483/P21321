@@ -68,6 +68,8 @@ int setup_radar(){
 	
 	//Creates a new NULL tuple since no arguments are required
 	pArgs = PyTuple_New(0);
+
+	return 0;
 }
 
 //Measures ice thickness with radar.
