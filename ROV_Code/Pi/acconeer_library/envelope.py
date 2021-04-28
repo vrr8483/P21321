@@ -38,11 +38,11 @@ def initialize():
 
 
 def main():
-        '''
-        ******************************
-        Main Call
-        ******************************
-        '''
+'''
+******************************
+Main Call
+******************************
+'''
     data_info, data = client.get_next()
     tempstr = " "
     #Array is within another Array, need to get address internal array
@@ -82,11 +82,11 @@ def main():
             #break
         #f.close()
    #pg_process.close()
-        '''
-        *********************************
-        Final Disconnect
-        *********************************
-        '''
+'''
+*********************************
+Final Disconnect
+*********************************
+'''
     return math.floor((((localMaxArray[1] - localMaxArray[0])/1.773)*0.0393701)*10)/10
 
 def disconnect():
