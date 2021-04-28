@@ -5,7 +5,7 @@ from acconeer.exptool import configs
 #from acconeer.exptool.pg_process import PGProccessDiedException, PGProcess
 import numpy
 import math
-sys.path.append("/home/pi/testing/acconeer-python-exploration-master")
+
 
 def main():
 

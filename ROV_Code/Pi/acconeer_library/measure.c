@@ -26,9 +26,10 @@
  * *
  * *F*/
 
-double
-measure(char * fileName, char * funcName)
-{
+double measure(){
+	char* fileName = "envelope.py";
+	char* funcName = "main";
+	
     //Initialize python.h data
     PyObject *pName, *pModule, *pFunc;
     PyObject *pArgs, *pValue;
@@ -51,7 +52,7 @@ measure(char * fileName, char * funcName)
     pName = PyUnicode_DecodeFSDefault(fileName);
     
     //Appends the current path to python
-    PyRun_SimpleString("import sys; sys.path.append('/home/pi/testing/acconeer-python-exploration-master')\n");
+    PyRun_SimpleString("import sys\nsys.path.append('/home/pi/testing/acconeer-python-exploration-master')\n");
     
     //Imports filename
     pModule = PyImport_Import(pName);
