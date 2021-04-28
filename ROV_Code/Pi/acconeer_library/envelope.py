@@ -6,6 +6,7 @@ from acconeer.exptool import configs
 import numpy
 import math
 
+client = clients.UARTClient("/dev/ttyUSB1")
 
 def initialize():
     '''
@@ -13,7 +14,6 @@ def initialize():
     Initialize: Call once at beginning
     **********************************
     '''
-    client = clients.UARTClient("/dev/ttyUSB1")
     client.squeeze = False
 
     sensor_config = configs.EnvelopeServiceConfig()
@@ -38,11 +38,11 @@ def initialize():
 
 
 def main():
-'''
-******************************
-Main Call
-******************************
-'''
+    '''
+    ******************************
+    Main Call
+    ******************************
+    '''
     data_info, data = client.get_next()
     tempstr = " "
     #Array is within another Array, need to get address internal array
@@ -76,17 +76,11 @@ Main Call
             else:
                 iteratorJ = iteratorJ + 1
         iteratorI = iteratorI + 1
-        #try:
-            #pg_process.put_data(data)
-        #except PGProccessDiedException:
-            #break
-        #f.close()
-   #pg_process.close()
-'''
-*********************************
-Final Disconnect
-*********************************
-'''
+    '''
+    *********************************
+    Final Disconnect
+    *********************************
+    '''
     return math.floor((((localMaxArray[1] - localMaxArray[0])/1.773)*0.0393701)*10)/10
 
 def disconnect():
