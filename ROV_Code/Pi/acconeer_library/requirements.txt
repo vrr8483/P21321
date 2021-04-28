@@ -1,0 +1,12 @@
+setuptools
+wheel
+numpy
+scipy
+pyserial
+matplotlib==3.2.1
+pyqtgraph==0.10
+h5py
+Flask
+pyyaml
+attrs
+docutils
