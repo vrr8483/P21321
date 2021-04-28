@@ -8,7 +8,11 @@ import math
 
 
 def main():
-
+    '''
+    **********************************
+    Initialize: Call once at beginning
+    **********************************
+    '''
     client = clients.UARTClient("/dev/ttyUSB1")
     client.squeeze = False
 
@@ -26,11 +30,17 @@ def main():
     #pg_process.start()
 
     client.start_session()
-
-    interrupt_handler = utils.ExampleInterruptHandler()
-    print("Press Ctrl-C to end session")
-    f = open("demo.txt","w");
+    '''
+    **********************************
+    END INITIALIZE
+    **********************************
+    '''
     while not interrupt_handler.got_signal:
+        '''
+        ******************************
+        Main Call
+        ******************************
+        '''
         data_info, data = client.get_next()
         tempstr = " "
         #Array is within another Array, need to get address internal array
@@ -68,8 +78,13 @@ def main():
             #pg_process.put_data(data)
         #except PGProccessDiedException:
             #break
-        f.close()
+        #f.close()
    #pg_process.close()
+        '''
+        *********************************
+        Final Disconnect
+        *********************************
+        '''
         client.disconnect()
         return math.floor((((localMaxArray[1] - localMaxArray[0])/1.773)*0.0393701)*10)/10
 
