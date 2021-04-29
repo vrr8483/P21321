@@ -419,19 +419,21 @@ void cleanup(){
 	digitalWrite(DRILL_ENA_BCM_PIN, 0);
 	digitalWrite(DRILL_ENB_BCM_PIN, 0);
 	
-	digitalWrite(DRILL_ACT_INA_BCM_PIN, 0);
-	digitalWrite(DRILL_ACT_INB_BCM_PIN, 0);
+	digitalWrite(DRILL_INA_BCM_PIN, 0);
+	digitalWrite(DRILL_INB_BCM_PIN, 0);
+	
+	digitalWrite(ACT_INA_BCM_PIN, 0);
+	digitalWrite(ACT_INB_BCM_PIN, 0);
 	
 	digitalWrite(LEFT_DRIVE_ENA_BCM_PIN, 0);
 	digitalWrite(LEFT_DRIVE_ENB_BCM_PIN, 0);
+	
 	digitalWrite(DRIVE_INA_BCM_PIN, 0);
 	digitalWrite(DRIVE_INB_BCM_PIN, 0);
 	
 	digitalWrite(RIGHT_DRIVE_ENA_BCM_PIN, 0);
 	digitalWrite(RIGHT_DRIVE_ENB_BCM_PIN, 0);
-	digitalWrite(RIGHT_DRIVE_INA_BCM_PIN, 0);
-	digitalWrite(RIGHT_DRIVE_INB_BCM_PIN, 0);
-	
+
 	close(arduino_serial_fd);
 	
 #ifndef SKIP_LOGGING
