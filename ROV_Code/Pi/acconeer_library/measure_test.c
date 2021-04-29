@@ -9,7 +9,7 @@ int main(){
 		return -1;
 	}
 
-	int iterations = 10;
+	int iterations = 100;
 
 	DECLARE_REPEAT_VAR(rv)
 	DECLARE_TIMER(timer)
