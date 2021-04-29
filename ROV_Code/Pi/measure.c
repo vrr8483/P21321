@@ -59,7 +59,8 @@ int setup_radar(){
 	if (pModule == NULL){
 		PyErr_Print();
 		fprintf(stderr, "Failed to load \"%s\"\n", fileName);
-		return cleanup_radar();
+		cleanup_radar();
+		return -1;
 	}
 	
 	//Creates a new NULL tuple since no arguments are required
@@ -71,7 +72,8 @@ int setup_radar(){
 	if (!pFunc || !PyCallable_Check(pFunc)){
 		if (PyErr_Occurred()) PyErr_Print();
 		fprintf(stderr, "Cannot find function \"%s\"\n", funcName_setup);
-		return cleanup_radar();
+		cleanup_radar();
+		return -1;
 	}
 	
 	pValue = PyObject_CallObject(pFunc, pArgs);
@@ -79,7 +81,8 @@ int setup_radar(){
 	if (pValue == NULL) {
 		PyErr_Print();
 		fprintf(stderr, "Python setup failed\n");
-		return cleanup_radar();
+		cleanup_radar();
+		return -1;
 	}
 	
 	//set up main call code
@@ -88,7 +91,8 @@ int setup_radar(){
 	if (!pFunc || !PyCallable_Check(pFunc)){
 		if (PyErr_Occurred()) PyErr_Print();
 		fprintf(stderr, "Cannot find function \"%s\"\n", funcName_maincall);
-		return cleanup_radar();
+		cleanup_radar();
+		return -1;
 	}
 
 	return 0;
