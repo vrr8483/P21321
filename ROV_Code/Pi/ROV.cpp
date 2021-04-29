@@ -30,6 +30,9 @@
 //https://github.com/barulicm/PiPCA9685
 #include "PCA9685.h"
 
+//Radar code (embeds python code into C)
+#include "measure.h"
+
 //Used in timing onPacket()
 //comment out EN_TIME to disable the timers
 //#define EN_TIME 1
@@ -385,6 +388,10 @@ void log_data(drill_data_point_struct data_point){
 //This function should be kept up to date with any hardware additions to
 //ensure that if the program isnt running, the motors don't draw any current from the battery.
 void cleanup(){
+
+	if (cleanup_radar() < 0){
+		fprintf(stderr, "Radar cleanup failed.\n");
+	}
 
 	//uninstall SBUS
 	sbus.~SBUS();
@@ -972,6 +979,12 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "SBUS install error: %d\n\r", err);
 		cleanup();
 		return err;
+	}
+
+	int radar_setup_result = setup_radar();
+	if (radar_setup_result < 0){
+		fprintf(stderr, "Radar setup failed.\n");
+		return radar_setup_result;
 	}
 
 	//call this function when SIGINT is received (Ctrl+C, kind of a force quit)

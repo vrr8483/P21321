@@ -2,7 +2,7 @@
 HEADERS = $(shell ls *.h) 
 
 CPP_SRC = PCA9685.cpp ROV.cpp SBUS.cpp
-C_SRC = sbus_driver.c
+C_SRC = sbus_driver.c measure.c
 SRC = $(CPP_SRC) $(C_SRC)
 
 BUILD_DIR = build
@@ -16,7 +16,10 @@ PROG = ROV
 CC = g++
 CPPFLAGS = -Wall -pedantic -g
 LIBS = -lwiringPi
-COMPILE_CMD = $(CC) $(CPPFLAGS) $(LIBS)
+PYTHON_CFLAGS = $(shell python3.7-config --cflags)
+PYTHON_LDFLAGS = $(shell /usr/bin/python3.7-config --ldflags)
+COMPILE_CMD = $(CC) $(CPPFLAGS) $(PYTHON_CFLAGS)
+LINK_CMD = $(CC) $(CPPFLAGS) $(LIBS) $(PYTHON_LDFLAGS)
 
 .PHONY: all clean help
 all: $(PROG)
@@ -33,7 +36,7 @@ $(PROG) : $(OBJS)
 	-./stop_running_ROV.sh
 	@echo "If the line above this one is an ignored error, "
 	@echo "it just means that there was no ROV process in the background to kill. Don't worry about it."
-	$(COMPILE_CMD) $^ -o $@
+	$(LINK_CMD) $^ -o $@
 
 clean:
 	rm -rf $(BUILD_DIR) $(PROG)
