@@ -27,8 +27,10 @@ SPortHub hub(0x12, 10);        //Hardware ID 0x12, SW pin 10
 //SPortHub hub(0x12, Serial3); //DOES NOT WORK
 const uint16_t sensor1_id = 0x5900;
 const uint16_t sensor2_id = 0x5958;
+const uint16_t sensor3_id = 0x5933;
 SimpleSPortSensor sensor1(sensor1_id);
 SimpleSPortSensor sensor2(sensor2_id);
+SimpleSPortSensor sensor3(sensor3_id);
 
 int buffer_position = 0;
 
@@ -47,6 +49,7 @@ void setup() {
   Serial3.begin(100000, SERIAL_8E2);
   hub.registerSensor(sensor1);       //Add sensor to the hub
   hub.registerSensor(sensor2);
+  hub.registerSensor(sensor3);
   hub.begin();                      //Start listening
 }
 
@@ -109,6 +112,9 @@ void loop() {
         case sensor2_id:
           sensor2.value = sensor_cmd_packet.cmd.value;
           break;
+	case sensor3_id:
+	  sensor3.value = sensor_cmd_packet.cmd.value;
+	  break;
         default:
           Serial3.print(sensor_cmd_packet.cmd.sensor_id);
           Serial3.println(" did not match any sensor IDs.");
