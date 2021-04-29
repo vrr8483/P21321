@@ -54,7 +54,7 @@ using namespace std::chrono;
 #define MILLISECS_PER_MICROSEC (0.001)
 
 #define ACTUATOR_DIST_SENSOR_ID (0x5900)
-#define CURR_SENSE_SENSOR_ID (0x5958)
+#define FORCE_SENSOR_ID (0x5958)
 #define RADAR_SENSOR_ID (0x5933)
 
 //channels as defined in the profile being used on the transmitter. 
@@ -186,7 +186,8 @@ union sensor_cmd_packet_type {
 struct drill_data_point_struct{
 	int t;
 	int actuator_dist;
-	int curr_sense;
+	int force;
+	double radar_thickness;
 };
 
 //This is the object that represents our interface to the SBUS protocol.
@@ -376,7 +377,8 @@ void log_data(drill_data_point_struct data_point){
 	std::string line =
 		std::to_string(data_point.t) + "," +
 		std::to_string(data_point.actuator_dist) + "," +
-		std::to_string(data_point.curr_sense) + '\n';
+		std::to_string(data_point.force) + "," + 
+		std::to_string(data_point.radar_thickness) + '\n';
 	
 	log_file << line;
 #endif
@@ -495,13 +497,13 @@ ice_safety_status_enum ice_safe(){
 	if (i + moving_avg_period > drill_data.size()) return INCONCLUSIVE;
 	
 	//determine a nominal current draw value based on an assumed 0.5 sec of drill movement w/ no ice resistance
-	double avg_nominal_currsense = 0;
+	double avg_nominal_force = 0;
 	for (unsigned int j = i; j < i + moving_avg_period; ++j){
 		drill_data_point_struct data_point = drill_data.at(j);
 		
-		avg_nominal_currsense += data_point.curr_sense;
+		avg_nominal_force += data_point.force;
 	}
-	avg_nominal_currsense = avg_nominal_currsense/(1.0*moving_avg_period);
+	avg_nominal_force = avg_nominal_force/(1.0*moving_avg_period);
 	
 	i += moving_avg_period; //jump ahead to next value
 	
@@ -511,8 +513,8 @@ ice_safety_status_enum ice_safe(){
 	//less than this ratio above the nominal current sense value means the ice is gone.
 	float ratio_threshold_normal = 1.1;
 	
-	float enter_ice_threshold = avg_nominal_currsense * ratio_threshold_ice;
-	float exit_ice_threshold = avg_nominal_currsense * ratio_threshold_normal;
+	float enter_ice_threshold = avg_nominal_force * ratio_threshold_ice;
+	float exit_ice_threshold = avg_nominal_force * ratio_threshold_normal;
 	
 	int ice_start_pos = -1;
 	int ice_end_pos = -1;
@@ -521,7 +523,7 @@ ice_safety_status_enum ice_safe(){
 	for (; i < drill_data.size(); ++i){
 		drill_data_point_struct data_point = drill_data.at(i);
 		
-		if (data_point.curr_sense > enter_ice_threshold){
+		if (data_point.force > enter_ice_threshold){
 			ice_start_pos = i;
 			break;
 		}
@@ -534,7 +536,7 @@ ice_safety_status_enum ice_safe(){
 	for (; i < drill_data.size(); ++i){
 		drill_data_point_struct data_point = drill_data.at(i);
 		
-		if (data_point.curr_sense > enter_ice_threshold){
+		if (data_point.force < exit_ice_threshold){
 			ice_end_pos = i;
 			break;
 		}
@@ -813,18 +815,24 @@ void onPacket(sbus_packet_t packet){
 				//first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
 				
 				int t = 0;
-				int actuator_dist = 0;
+				int actuator_adc = 0;
 				int curr_sense = 0;
 
 				try {
 					//attempt to convert to ints. throws an exception if stoi fails
 					t = std::stoi(first_num_str);
-					actuator_dist = std::stoi(second_num_str);
+					actuator_adc = std::stoi(second_num_str);
 					curr_sense = std::stoi(third_num_str);
 					
 					valid_data.t = t;
-					valid_data.actuator_dist = actuator_dist;
-					valid_data.curr_sense = curr_sense;
+					
+					//convert actuator A2D val to inches
+					valid_data.actuator_dist = (int)((double)actuator_adc - 147.831)*(6.0/883.5);
+
+					//convert current sense to force (lbs)
+					valid_data.force = (int)(1.76056*((double)curr_sense - 4.91));
+					
+					valid_data.radar_thickness = radar_result; //inches
 					valid_values_found = true;
 
 					//printf("t: %d; D: %d; C: %d\n", t, actuator_dist, curr_sense);
@@ -848,7 +856,7 @@ void onPacket(sbus_packet_t packet){
 		
 		if (valid_values_found){
 			send_sensor_cmd(ACTUATOR_DIST_SENSOR_ID, valid_data.actuator_dist);
-			send_sensor_cmd(CURR_SENSE_SENSOR_ID, valid_data.curr_sense);
+			send_sensor_cmd(FORCE_SENSOR_ID, valid_data.force);
 		}
 		
 		//garbage collection of global buffer
