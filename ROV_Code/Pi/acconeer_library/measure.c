@@ -28,25 +28,27 @@ char* funcName_cleanup = "disconnect";
 //returns: 0 on success, -1 on failure.
 int setup_radar(){
 	
-	//Input checks
-	if (fileName == NULL) {
-		fprintf(stderr,"Usage: call pythonfile filename\n");
-		return -1;
-	}
-	
-	if (funcName == NULL) {
-		fprintf(stderr,"Usage: call pythonfile funcname\n");
-		return -1;
-	}
-	
 	//Initialize python.h
 	Py_Initialize();
 	
 	//Converts fileName to string in python
 	pName = PyUnicode_DecodeFSDefault(fileName);
+
 	
+	const int cwd_buf_size = 1024;
+	char cwd_buf[cwd_buf_size];
+	getcwd(cwd_buf, cwd_buf_size);
+	//strncat(cwd_buf, "/acconeer_library", cwd_buf_size - strlen(cwd_buf));
+	//printf("Path: %s\n", cwd_buf);
+	
+	const int pystr_size = 1024*2;
+	char python_simpstring[pystr_size];
+	
+	sprintf(python_simpstring, "import sys\nsys.path.append('%s')\n", cwd_buf);
+
 	//Appends the current path to python
-	PyRun_SimpleString("import sys\nsys.path.append('/home/pi/P21321/ROV_Code/Pi/acconeer_library')\n");
+	PyRun_SimpleString(python_simpstring);
+	
 	
 	//Imports filename
 	pModule = PyImport_Import(pName);
