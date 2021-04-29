@@ -390,11 +390,6 @@ void log_data(drill_data_point_struct data_point){
 //ensure that if the program isnt running, the motors don't draw any current from the battery.
 void cleanup(){
 
-	//why does this sometimes fail (timeout in client.disconnect) when called from SIGINT or the like?
-	if (cleanup_radar() < 0){
-		fprintf(stderr, "Radar cleanup failed.\n");
-	}
-
 	//uninstall SBUS
 	sbus.~SBUS();
 
@@ -433,6 +428,11 @@ void cleanup(){
 #ifndef SKIP_LOGGING
 	log_file.close();
 #endif
+
+	//why does this sometimes fail (timeout in client.disconnect) when called from SIGINT or the like?
+	if (cleanup_radar() < 0){
+		fprintf(stderr, "Radar cleanup failed.\n");
+	}
 }
 
 //called when SIGINT is received (Ctrl+C)
@@ -607,6 +607,7 @@ void onPacket(sbus_packet_t packet){
 	//nothing
 	STOP_TIMER(dummy_timer)
 	PRINT_TIMER(dummy_timer)
+	RESET_TIMER(dummy_timer)
 
 	//-------------------------------------------------------------------
 	//actuator PWM
@@ -632,6 +633,7 @@ void onPacket(sbus_packet_t packet){
 
 	STOP_TIMER(act_timer)
 	PRINT_TIMER(act_timer)
+	RESET_TIMER(act_timer)
 	
 	//-------------------------------------------------------------------
 	//wheels PWM
@@ -656,6 +658,7 @@ void onPacket(sbus_packet_t packet){
 
 	STOP_TIMER(wheel_timer)
 	PRINT_TIMER(wheel_timer)
+	RESET_TIMER(wheel_timer)
 
 	//-------------------------------------------------------------------
 	//steering
@@ -685,6 +688,7 @@ void onPacket(sbus_packet_t packet){
 
 	STOP_TIMER(steering_timer)
 	PRINT_TIMER(steering_timer)
+	RESET_TIMER(steering_timer)
 	
 	//-------------------------------------------------------------------
 	//enable and direction pins
@@ -712,6 +716,7 @@ void onPacket(sbus_packet_t packet){
 	
 	STOP_TIMER(ED_timer)
 	PRINT_TIMER(ED_timer)
+	RESET_TIMER(ED_timer)
 
 	//-------------------------------------------------------------------
 	//drill power
@@ -728,6 +733,7 @@ void onPacket(sbus_packet_t packet){
 	
 	STOP_TIMER(drill_timer)
 	PRINT_TIMER(drill_timer)
+	RESET_TIMER(drill_timer)
 
 	//-------------------------------------------------------------------
 	//radar call
@@ -738,11 +744,12 @@ void onPacket(sbus_packet_t packet){
 	if (radar_result >= 0){
 		send_sensor_cmd(RADAR_SENSOR_ID, (uint32_t)(radar_result));
 		//TODO: log radar result
-		printf("Radar result: %f\n", radar_result);
+		//printf("Radar result: %f\n", radar_result);
 	}
-
+	
 	STOP_TIMER(radar_timer)
 	PRINT_TIMER(radar_timer)
+	RESET_TIMER(radar_timer)
 
 	//here begins the code for receiving, logging, and sending commands due to:
 	//the analog read pins from the Arduino (curr sense and actuator dist)
@@ -830,8 +837,8 @@ void onPacket(sbus_packet_t packet){
 					arduino_stream_buf.erase(0, second_cr_indx-1);
 				} catch (...){
 					fprintf(stderr,
-						"Could not convert to integers: '%s', '%s'\n",
-						first_num_str.c_str(), second_num_str.c_str());
+						"Could not convert to integers: '%s', '%s', '%s'\n",
+						first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
 				}
 			} else {
 				//CRs not found, no valid data in stream right now
@@ -894,6 +901,15 @@ int main(int argc, char* argv[]){
 	digitalWrite(RIGHT_DRIVE_ENA_BCM_PIN, 1);
 	digitalWrite(RIGHT_DRIVE_ENB_BCM_PIN, 1);
 
+	
+	//setup radar python environment
+	int radar_setup_result = setup_radar();
+	if (radar_setup_result < 0){
+		fprintf(stderr, "Radar setup failed.\n");
+		return radar_setup_result;
+	}
+	
+	
 	//Initializes the PCA object. On failure, the constructor throws an exception.
 	//So this statement will catch that exception and abort the program on such an event
 	//Since if it fails, its due to a hardware misconfiguration.
@@ -997,12 +1013,6 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "SBUS install error: %d\n\r", err);
 		cleanup();
 		return err;
-	}
-
-	int radar_setup_result = setup_radar();
-	if (radar_setup_result < 0){
-		fprintf(stderr, "Radar setup failed.\n");
-		return radar_setup_result;
 	}
 
 	//call this function when SIGINT is received (Ctrl+C, kind of a force quit)
