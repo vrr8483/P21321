@@ -104,14 +104,15 @@ double measure(){
 	if (pValue != NULL) {
 		
 		//printf("Result of call: %ld\n", PyLong_AsLong(pValue));
-		return PyLong_AsLong(pValue);
+		return PyFloat_AsDouble(pValue);
 		
 	} else {
 		
 		PyErr_Print();
 		fprintf(stderr, "Call failed\n");
 		
-		return cleanup_radar();
+		//return cleanup_radar();
+		return -1.0;
 	}
 	
 }
