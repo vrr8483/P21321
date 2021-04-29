@@ -95,32 +95,37 @@ using namespace std::chrono;
 
 //The Raspberry pi has two pin addressing modes: Wiring pi (WPI), and Broadcom (BCM).
 //BCM is usually better to use.
-#define DRILL_ACT_INA_WPI_PIN (3)
-#define DRILL_ACT_ENA_WPI_PIN (4)
-#define DRILL_ACT_ENB_WPI_PIN (5)
-#define DRILL_ACT_INB_WPI_PIN (6)
+//#define DRILL_ACT_INA_WPI_PIN (3)
+//#define DRILL_ACT_ENA_WPI_PIN (4)
+//#define DRILL_ACT_ENB_WPI_PIN (5)
+//#define DRILL_ACT_INB_WPI_PIN (6)
 
 //EN A and EN B are the H bridge enables for path A and B (active high)
 //IN A and IN B are turned on one at a time to indicate the direction of the motor
 
-#define LEFT_DRIVE_INA_BCM_PIN (4)
-#define LEFT_DRIVE_ENA_BCM_PIN (17)
-#define LEFT_DRIVE_ENB_BCM_PIN (18)
-#define LEFT_DRIVE_INB_BCM_PIN (27)
+#define DRIVE_INA_BCM_PIN (4)
+#define DRIVE_INB_BCM_PIN (17)
 
-#define DRILL_ACT_INA_BCM_PIN (22)
-#define DRILL_ACT_INB_BCM_PIN (23)
+#define LEFT_DRIVE_ENA_BCM_PIN (18)
+#define LEFT_DRIVE_ENB_BCM_PIN (27)
 
-#define DRILL_ENA_BCM_PIN (24)
-#define DRILL_ENB_BCM_PIN (25)
+//#define DRILL_ACT_INA_BCM_PIN (22)
+//#define DRILL_ACT_INB_BCM_PIN (23)
 
-#define ACT_ENA_BCM_PIN (5)
-#define ACT_ENB_BCM_PIN (6)
+#define DRILL_INA_BCM_PIN (22)
+#define DRILL_ENA_BCM_PIN (23)
+#define DRILL_ENB_BCM_PIN (24)
+#define DRILL_INB_BCM_PIN (25)
 
-#define RIGHT_DRIVE_INA_BCM_PIN (12)
-#define RIGHT_DRIVE_ENA_BCM_PIN (13)
-#define RIGHT_DRIVE_ENB_BCM_PIN (16)
-#define RIGHT_DRIVE_INB_BCM_PIN (19)
+#define ACT_INA_BCM_PIN (5)
+#define ACT_ENA_BCM_PIN (6)
+#define ACT_ENB_BCM_PIN (12)
+#define ACT_INB_BCM_PIN (13)
+
+//#define RIGHT_DRIVE_INA_BCM_PIN ()
+#define RIGHT_DRIVE_ENA_BCM_PIN (16)
+#define RIGHT_DRIVE_ENB_BCM_PIN (19)
+//#define RIGHT_DRIVE_INB_BCM_PIN ()
 
 enum PWM_pins_enum {
 	PWM_CHANNEL_ACTUATOR = 0,
@@ -419,8 +424,8 @@ void cleanup(){
 	
 	digitalWrite(LEFT_DRIVE_ENA_BCM_PIN, 0);
 	digitalWrite(LEFT_DRIVE_ENB_BCM_PIN, 0);
-	digitalWrite(LEFT_DRIVE_INA_BCM_PIN, 0);
-	digitalWrite(LEFT_DRIVE_INB_BCM_PIN, 0);
+	digitalWrite(DRIVE_INA_BCM_PIN, 0);
+	digitalWrite(DRIVE_INB_BCM_PIN, 0);
 	
 	digitalWrite(RIGHT_DRIVE_ENA_BCM_PIN, 0);
 	digitalWrite(RIGHT_DRIVE_ENB_BCM_PIN, 0);
@@ -706,20 +711,18 @@ void onPacket(sbus_packet_t packet){
 	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > FrSky_switch_threshold;
 	bool B_enabled = packet.channels[SA_UP_CHANNEL] > FrSky_switch_threshold;
 
-	digitalWrite(LEFT_DRIVE_INA_BCM_PIN, A_enabled);
-	digitalWrite(LEFT_DRIVE_INB_BCM_PIN, B_enabled);
-	
-	//switched! cause they're on opposite sides
-	digitalWrite(RIGHT_DRIVE_INB_BCM_PIN, A_enabled);
-	digitalWrite(RIGHT_DRIVE_INA_BCM_PIN, B_enabled);
-	
+	digitalWrite(DRIVE_INA_BCM_PIN, A_enabled);
+	digitalWrite(DRIVE_INB_BCM_PIN, B_enabled);
 	
 	//actuator/drill
 	A_enabled = packet.channels[SC_DOWN_CHANNEL] > FrSky_switch_threshold;
 	B_enabled = packet.channels[SC_UP_CHANNEL] > FrSky_switch_threshold;
 
-	digitalWrite(DRILL_ACT_INA_BCM_PIN, A_enabled);
-	digitalWrite(DRILL_ACT_INB_BCM_PIN, B_enabled);
+	digitalWrite(ACT_INA_BCM_PIN, A_enabled);
+	digitalWrite(ACT_INB_BCM_PIN, B_enabled);
+	
+	digitalWrite(DRILL_INA_BCM_PIN, A_enabled);
+	digitalWrite(DRILL_INB_BCM_PIN, B_enabled);
 	
 	STOP_TIMER(ED_timer)
 	PRINT_TIMER(ED_timer)
@@ -888,22 +891,22 @@ int main(int argc, char* argv[]){
 	
 	pinMode(DRILL_ENA_BCM_PIN, OUTPUT);
 	pinMode(DRILL_ENB_BCM_PIN, OUTPUT);
+	pinMode(DRILL_INA_BCM_PIN, OUTPUT);
+	pinMode(DRILL_INB_BCM_PIN, OUTPUT);
 	
 	pinMode(ACT_ENA_BCM_PIN, OUTPUT);
 	pinMode(ACT_ENB_BCM_PIN, OUTPUT);
+	pinMode(ACT_INA_BCM_PIN, OUTPUT);
+	pinMode(ACT_INB_BCM_PIN, OUTPUT);
 	
-	pinMode(DRILL_ACT_INA_BCM_PIN, OUTPUT);
-	pinMode(DRILL_ACT_INB_BCM_PIN, OUTPUT);
+	pinMode(DRIVE_INA_BCM_PIN, OUTPUT);
+	pinMode(DRIVE_INB_BCM_PIN, OUTPUT);
 	
 	pinMode(LEFT_DRIVE_ENA_BCM_PIN, OUTPUT);
 	pinMode(LEFT_DRIVE_ENB_BCM_PIN, OUTPUT);
-	pinMode(LEFT_DRIVE_INA_BCM_PIN, OUTPUT);
-	pinMode(LEFT_DRIVE_INB_BCM_PIN, OUTPUT);
 	
 	pinMode(RIGHT_DRIVE_ENA_BCM_PIN, OUTPUT);
 	pinMode(RIGHT_DRIVE_ENB_BCM_PIN, OUTPUT);
-	pinMode(RIGHT_DRIVE_INA_BCM_PIN, OUTPUT);
-	pinMode(RIGHT_DRIVE_INB_BCM_PIN, OUTPUT);
 
 	//turn on all the enable pins on the motor drivers
 	digitalWrite(DRILL_ENA_BCM_PIN, 1);
