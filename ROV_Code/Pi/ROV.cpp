@@ -55,6 +55,7 @@ using namespace std::chrono;
 
 #define ACTUATOR_DIST_SENSOR_ID (0x5900)
 #define CURR_SENSE_SENSOR_ID (0x5958)
+#define RADAR_SENSOR_ID (0x5933)
 
 //channels as defined in the profile being used on the transmitter. 
 //these are channel indices, which are 0-indexed, so keep that in 
@@ -389,6 +390,7 @@ void log_data(drill_data_point_struct data_point){
 //ensure that if the program isnt running, the motors don't draw any current from the battery.
 void cleanup(){
 
+	//TODO: why does this fail when called from SIGINT or the like?
 	if (cleanup_radar() < 0){
 		fprintf(stderr, "Radar cleanup failed.\n");
 	}
@@ -558,6 +560,7 @@ DECLARE_TIMER(wheel_timer)
 DECLARE_TIMER(steering_timer)
 DECLARE_TIMER(ED_timer)
 DECLARE_TIMER(drill_timer)
+DECLARE_TIMER(radar_timer)
 
 void onPacket(sbus_packet_t packet){
 	
@@ -725,7 +728,22 @@ void onPacket(sbus_packet_t packet){
 	
 	STOP_TIMER(drill_timer)
 	PRINT_TIMER(drill_timer)
+
+	//-------------------------------------------------------------------
+	//radar call
 	
+	START_TIMER(radar_timer)
+
+	double radar_result = measure();
+	if (radar_result >= 0){
+		send_sensor_cmd(RADAR_SENSOR_ID, (uint32_t)(radar_result));
+		//TODO: log radar result
+		printf("Radar result: %f\n", radar_result);
+	}
+
+	STOP_TIMER(radar_timer)
+	PRINT_TIMER(radar_timer)
+
 	//here begins the code for receiving, logging, and sending commands due to:
 	//the analog read pins from the Arduino (curr sense and actuator dist)
 	//the format for the data coming in is:
