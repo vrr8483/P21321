@@ -390,7 +390,7 @@ void log_data(drill_data_point_struct data_point){
 //ensure that if the program isnt running, the motors don't draw any current from the battery.
 void cleanup(){
 
-	//TODO: why does this fail when called from SIGINT or the like?
+	//why does this sometimes fail (timeout in client.disconnect) when called from SIGINT or the like?
 	if (cleanup_radar() < 0){
 		fprintf(stderr, "Radar cleanup failed.\n");
 	}
