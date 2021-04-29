@@ -1,0 +1,2 @@
+gcc -c -g $(python3.7-config --cflags) measure.c -o measure.o && gcc -c -g measure_test.c -DEN_TIME -o measure_test.o && gcc measure.o measure_test.o $(/usr/bin/python3.7-config --ldflags) -o measure
+
