@@ -56,6 +56,7 @@ using namespace std::chrono;
 #define ACTUATOR_DIST_SENSOR_ID (0x5900)
 #define FORCE_SENSOR_ID (0x5958)
 #define RADAR_SENSOR_ID (0x5933)
+#define DRILL_CONCL_ID (0x5969)
 
 //channels as defined in the profile being used on the transmitter. 
 //these are channel indices, which are 0-indexed, so keep that in 
@@ -188,6 +189,7 @@ struct drill_data_point_struct{
 	int actuator_dist;
 	int force;
 	double radar_thickness;
+	bool ice_safe;
 };
 
 //This is the object that represents our interface to the SBUS protocol.
@@ -547,7 +549,10 @@ ice_safety_status_enum ice_safe(){
 	
 	int ice_thickness_actuator = ice_end_pos - ice_start_pos;
 	
-	//TODO: find the actuator stroke length value ratio
+	if (ice_thickness_actuator > 4){ //inches
+		return ICE_SAFE;
+	}
+
 	return ICE_UNSAFE;
 }
 
@@ -742,10 +747,10 @@ void onPacket(sbus_packet_t packet){
 	
 	START_TIMER(radar_timer)
 
+	static double valid_radar_result = 0;
 	double radar_result = measure();
 	if (radar_result >= 0){
-		send_sensor_cmd(RADAR_SENSOR_ID, (uint32_t)(radar_result));
-		//TODO: log radar result
+		valid_radar_result = radar_result;
 		//printf("Radar result: %f\n", radar_result);
 	}
 	
@@ -832,11 +837,13 @@ void onPacket(sbus_packet_t packet){
 					//convert current sense to force (lbs)
 					valid_data.force = (int)(1.76056*((double)curr_sense - 4.91));
 					
-					valid_data.radar_thickness = radar_result; //inches
+					valid_data.radar_thickness = valid_radar_result; //inches
 					valid_values_found = true;
 
 					//printf("t: %d; D: %d; C: %d\n", t, actuator_dist, curr_sense);
-					//TODO: get and report ice safety
+					//TODO: Need to determine WHEN this function call is necessary, and to give it a starting point so we dont re-review old drillings.
+					ice_safety_status_enum drill_conclusion = ice_safe();
+					valid_data.ice_safe = drill_conclusion == ICE_SAFE;
 					
 					//write to log file
 					log_data(valid_data);
@@ -855,6 +862,8 @@ void onPacket(sbus_packet_t packet){
 		} //end while loop iterating through arduino stream
 		
 		if (valid_values_found){
+			send_sensor_cmd(DRILL_CONCL_ID, (uint32_t)(valid_data.ice_safe));
+			send_sensor_cmd(RADAR_SENSOR_ID, (uint32_t)(valid_data.radar_thickness));
 			send_sensor_cmd(ACTUATOR_DIST_SENSOR_ID, valid_data.actuator_dist);
 			send_sensor_cmd(FORCE_SENSOR_ID, valid_data.force);
 		}
