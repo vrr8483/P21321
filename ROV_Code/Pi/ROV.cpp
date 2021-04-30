@@ -44,10 +44,9 @@
 //uncomment to skip creating/writing to the log file
 #define SKIP_LOGGING 1
 
-#ifdef PRINT_PACKETS
 #include <chrono>
 using namespace std::chrono;
-#endif
+
 
 #define SECS_PER_MILLISEC (0.001)
 #define SECS_PER_MICROSEC (0.000001)
@@ -582,7 +581,6 @@ void onPacket(sbus_packet_t packet){
 	//printf("now: %ld, lastPrint: %ld\n", now, lastPrint);
 	
 	//need std::chrono for this
-#ifdef PRINT_PACKETS
 	milliseconds period = milliseconds(100);
 	static milliseconds lastms = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()
@@ -590,6 +588,8 @@ void onPacket(sbus_packet_t packet){
 	milliseconds ms = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()
 			);
+
+#ifdef PRINT_PACKETS
 
 	if (ms - lastms > period){
 		lastms = ms;
@@ -620,7 +620,7 @@ void onPacket(sbus_packet_t packet){
 	START_TIMER(dummy_timer)
 	//nothing
 	STOP_TIMER(dummy_timer)
-	PRINT_TIMER(dummy_timer)
+	//PRINT_TIMER(dummy_timer)
 	RESET_TIMER(dummy_timer)
 
 	//-------------------------------------------------------------------
@@ -646,7 +646,7 @@ void onPacket(sbus_packet_t packet){
 	}
 
 	STOP_TIMER(act_timer)
-	PRINT_TIMER(act_timer)
+	//PRINT_TIMER(act_timer)
 	RESET_TIMER(act_timer)
 	
 	//-------------------------------------------------------------------
@@ -671,7 +671,7 @@ void onPacket(sbus_packet_t packet){
 	}
 
 	STOP_TIMER(wheel_timer)
-	PRINT_TIMER(wheel_timer)
+	//PRINT_TIMER(wheel_timer)
 	RESET_TIMER(wheel_timer)
 
 	//-------------------------------------------------------------------
@@ -701,7 +701,7 @@ void onPacket(sbus_packet_t packet){
 	}
 
 	STOP_TIMER(steering_timer)
-	PRINT_TIMER(steering_timer)
+	//PRINT_TIMER(steering_timer)
 	RESET_TIMER(steering_timer)
 	
 	//-------------------------------------------------------------------
@@ -727,7 +727,7 @@ void onPacket(sbus_packet_t packet){
 	digitalWrite(DRILL_INB_BCM_PIN, B_enabled);
 	
 	STOP_TIMER(ED_timer)
-	PRINT_TIMER(ED_timer)
+	//PRINT_TIMER(ED_timer)
 	RESET_TIMER(ED_timer)
 
 	//-------------------------------------------------------------------
@@ -744,24 +744,32 @@ void onPacket(sbus_packet_t packet){
 	}
 	
 	STOP_TIMER(drill_timer)
-	PRINT_TIMER(drill_timer)
+	//PRINT_TIMER(drill_timer)
 	RESET_TIMER(drill_timer)
 
 	//-------------------------------------------------------------------
 	//radar call
 	
-	START_TIMER(radar_timer)
-
 	static double valid_radar_result = 0;
-	double radar_result = measure();
-	if (radar_result >= 0){
-		valid_radar_result = radar_result;
-		//printf("Radar result: %f\n", radar_result);
+	//printf("period: %lld\n", (ms - lastms).count());
+	//lastms = ms;
+	if (ms - lastms > period){
+		
+		lastms = ms;
+
+		START_TIMER(radar_timer)
+		
+		double radar_result = measure();
+		if (radar_result >= 0){
+			valid_radar_result = radar_result;
+			//printf("Radar result: %f\n", radar_result);
+		}
+		
+		STOP_TIMER(radar_timer)
+		PRINT_TIMER(radar_timer)
+		RESET_TIMER(radar_timer)
+
 	}
-	
-	STOP_TIMER(radar_timer)
-	PRINT_TIMER(radar_timer)
-	RESET_TIMER(radar_timer)
 
 	//here begins the code for receiving, logging, and sending commands due to:
 	//the analog read pins from the Arduino (curr sense and actuator dist)
@@ -857,8 +865,10 @@ void onPacket(sbus_packet_t packet){
 					arduino_stream_buf.erase(0, second_cr_indx-1);
 				} catch (...){
 					fprintf(stderr,
-						"Could not convert to integers: '%s', '%s', '%s'\n",
-						first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str());
+						"Could not convert to integers: '%s', '%s', '%s'\nStream: %s\n",
+						first_num_str.c_str(), second_num_str.c_str(), third_num_str.c_str(), arduino_stream_buf.c_str());
+					arduino_stream_buf.erase();
+					break;
 				}
 			} else {
 				//CRs not found, no valid data in stream right now

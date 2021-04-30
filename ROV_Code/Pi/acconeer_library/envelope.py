@@ -5,6 +5,7 @@ from acconeer.exptool import configs
 #from acconeer.exptool.pg_process import PGProccessDiedException, PGProcess
 import numpy
 import math
+import time
 
 client = clients.UARTClient("/dev/ttyUSB1")
 
@@ -15,15 +16,22 @@ def initialize():
     **********************************
     '''
     client.squeeze = False
-
+    
     sensor_config = configs.EnvelopeServiceConfig()
+    
     sensor_config.sensor = 1
     sensor_config.range_interval = [0.2, 1.0]
     sensor_config.profile = sensor_config.Profile.PROFILE_2
     sensor_config.hw_accelerated_average_samples = 20
     sensor_config.downsampling_factor = 2
+    sensor_config.repetition_mode = configs.EnvelopeServiceConfig.RepetitionMode.SENSOR_DRIVEN
+    sensor_config.update_rate = 10 # period of 100ms
+
+    #print(sensor_config)
 
     session_info = client.setup_session(sensor_config)
+
+    #print(session_info)
 
     #pg_updater = PGUpdater(sensor_config, None, session_info)
     #pg_process = PGProcess(pg_updater)
@@ -43,7 +51,10 @@ def main():
     Main Call
     ******************************
     '''
+    #start = time.time()
     data_info, data = client.get_next()
+    #end = time.time()
+
     tempstr = " "
     #Array is within another Array, need to get address internal array
     dataArray = data[0]
@@ -51,6 +62,7 @@ def main():
     breakVariable = 0
     iteratorJ = 0
     iteratorI = 0
+    
     for x in dataArray:
         if(iteratorJ > 10):
             localMaxArray[0] = iteratorI - iteratorJ
@@ -61,10 +73,14 @@ def main():
                 iteratorJ = 0
             else:
                 iteratorJ = iteratorJ + 1
+        
         iteratorI = iteratorI + 1
+    
     while(dataArray[iteratorI] >= dataArray[iteratorI + 1]):
         iteratorI = iteratorI + 1
+    
     iteratorJ = 0
+    
     while(iteratorI < 827):
         if(iteratorJ > 10):
             localMaxArray[1] = iteratorI - iteratorJ
@@ -75,12 +91,17 @@ def main():
                 iteratorJ = 0
             else:
                 iteratorJ = iteratorJ + 1
+        
         iteratorI = iteratorI + 1
     '''
     *********************************
     Final Disconnect
     *********************************
     '''
+
+    #end = time.time()
+    #print("Python time: {0:.6f} secs".format(end - start))
+
     return math.floor((((localMaxArray[1] - localMaxArray[0])/1.773)*0.0393701)*10)/10
 
 def disconnect():
