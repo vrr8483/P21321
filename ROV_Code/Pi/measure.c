@@ -134,23 +134,27 @@ int cleanup_radar(){
 
 	Py_CLEAR(pFunc);
 	
-	//call cleanup code within python
-	pFunc = PyObject_GetAttrString(pModule, funcName_cleanup);
-	
-	if (!pFunc || !PyCallable_Check(pFunc)){
+	if (pModule){
 		
-		if (PyErr_Occurred()) PyErr_Print();
-		fprintf(stderr, "Cannot find function \"%s\" in \"%s\" (or it is not callable)\n", funcName_cleanup, fileName);
+		//call cleanup code within python
+		pFunc = PyObject_GetAttrString(pModule, funcName_cleanup);
+	
+		if (!pFunc || !PyCallable_Check(pFunc)){
 		
-	} else {
-
-		Py_CLEAR(pValue);
-	
-		pValue = PyObject_CallObject(pFunc, NULL);
-	
-		if (pValue == NULL) {
 			if (PyErr_Occurred()) PyErr_Print();
-			fprintf(stderr, "Python cleanup failed\n");
+			fprintf(stderr, "Cannot find function \"%s\" in \"%s\" (or it is not callable)\n", 
+					funcName_cleanup, fileName);
+
+		} else {
+
+			Py_CLEAR(pValue);
+			
+			pValue = PyObject_CallObject(pFunc, NULL);
+			
+			if (pValue == NULL) {
+				if (PyErr_Occurred()) PyErr_Print();
+				fprintf(stderr, "Python cleanup failed\n");
+			}
 		}
 	}
 	
