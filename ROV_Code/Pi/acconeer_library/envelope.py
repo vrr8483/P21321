@@ -101,8 +101,9 @@ def main():
 
     #end = time.time()
     #print("Python time: {0:.6f} secs".format(end - start))
-
-    return math.floor((((localMaxArray[1] - localMaxArray[0])/1.773)*0.0393701)*10)/10
+    
+    # return result in hundredths of an inch
+    return (((localMaxArray[1] - localMaxArray[0])/1.773)*0.0393701)*100
 
 def disconnect():
     client.disconnect()
