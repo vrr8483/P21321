@@ -223,11 +223,11 @@ std::fstream log_file;
 //constants
 
 //max and min PWM % (out of 100) for the actuator to take on
-int max_act_PWM = 30;
+int max_act_PWM = 83;
 int min_act_PWM = 0;
 
 //max and min PWM % (out of 100) for the wheels to take on
-int max_wheel_PWM = 50;
+int max_wheel_PWM = 100;
 int min_wheel_PWM = 0;
 
 //max and min throttle values that the controller will give us.
@@ -710,8 +710,8 @@ void onPacket(sbus_packet_t packet){
 	START_TIMER(ED_timer)
 
 	//wheels
-	bool A_enabled = packet.channels[SA_DOWN_CHANNEL] > FrSky_switch_threshold;
-	bool B_enabled = packet.channels[SA_UP_CHANNEL] > FrSky_switch_threshold;
+	bool A_enabled = packet.channels[SA_UP_CHANNEL] > FrSky_switch_threshold;
+	bool B_enabled = packet.channels[SA_DOWN_CHANNEL] > FrSky_switch_threshold;
 
 	digitalWrite(DRIVE_INA_BCM_PIN, A_enabled);
 	digitalWrite(DRIVE_INB_BCM_PIN, B_enabled);
@@ -737,11 +737,11 @@ void onPacket(sbus_packet_t packet){
 	
 	bool drill_on = packet.channels[SD_ON_CHANNEL] > FrSky_switch_threshold;
 	static bool drill_on_last_time = !drill_on;
-	if (drill_on && !drill_on_last_time){
+	//if (drill_on && !drill_on_last_time){
 		pca->set_pwm(PWM_CHANNEL_DRILL, 0, max_PCA_val);
-	} else if (!drill_on && drill_on_last_time) {
+	/*} else if (!drill_on && drill_on_last_time) {
 		pca->set_pwm(PWM_CHANNEL_DRILL, 0, 0);
-	}
+	}*/
 	
 	STOP_TIMER(drill_timer)
 	//PRINT_TIMER(drill_timer)
