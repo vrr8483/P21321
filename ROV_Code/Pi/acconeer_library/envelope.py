@@ -6,8 +6,10 @@ from acconeer.exptool import configs
 import numpy
 import math
 import time
+from scipy import stats
 
 client = clients.UARTClient("/dev/ttyUSB1")
+numtries = 1
 
 def initialize():
     '''
@@ -25,7 +27,7 @@ def initialize():
     sensor_config.hw_accelerated_average_samples = 20
     sensor_config.downsampling_factor = 2
     sensor_config.repetition_mode = configs.EnvelopeServiceConfig.RepetitionMode.SENSOR_DRIVEN
-    sensor_config.update_rate = 10 # period of 100ms
+    sensor_config.update_rate = 10*numtries # period of 100ms
 
     #print(sensor_config)
 
@@ -51,59 +53,94 @@ def main():
     Main Call
     ******************************
     '''
-    #start = time.time()
-    data_info, data = client.get_next()
-    #end = time.time()
-
-    tempstr = " "
-    #Array is within another Array, need to get address internal array
-    dataArray = data[0]
-    localMaxArray = [0,0]
-    breakVariable = 0
-    iteratorJ = 0
-    iteratorI = 0
-    
-    for x in dataArray:
-        if(iteratorJ > 10):
-            localMaxArray[0] = iteratorI - iteratorJ
-            break
-        else:
-            if(x >= localMaxArray[0]):
-                localMaxArray[0] = x
-                iteratorJ = 0
-            else:
-                iteratorJ = iteratorJ + 1
+#valuesArray = numpy.empty(numtries)
+    for j in range(numtries):
+        #start = time.time()
+        data_info, data = client.get_next()
+        #end = time.time()
         
-        iteratorI = iteratorI + 1
-    
-    while(dataArray[iteratorI] >= dataArray[iteratorI + 1]):
-        iteratorI = iteratorI + 1
-    
-    iteratorJ = 0
-    
-    while(iteratorI < 827):
-        if(iteratorJ > 10):
-            localMaxArray[1] = iteratorI - iteratorJ
-            break
-        else:
-            if(dataArray[iteratorI] >= localMaxArray[1]):
-                localMaxArray[1] = dataArray[iteratorI]
-                iteratorJ = 0
-            else:
-                iteratorJ = iteratorJ + 1
-        
-        iteratorI = iteratorI + 1
-    '''
-    *********************************
-    Final Disconnect
-    *********************************
-    '''
+        tempstr = " "
+        #Array is within another Array, need to get address internal array
+        dataArray = data[0]
+        localMaxArray = [0,0]
+        breakVariable = 0
+        iteratorJ = 0
+        iteratorI = 0
+       
+        # low pass filter
+        alpha = 0.5
+        lpf_array = dataArray
+        i = 0
+        while i < len(dataArray):
+            lpf_array[i] = dataArray[max(0, i-1)]*alpha + (1-alpha)*dataArray[i]
+            i += 1
 
-    #end = time.time()
-    #print("Python time: {0:.6f} secs".format(end - start))
-    
-    # return result in hundredths of an inch
-    return (((localMaxArray[1] - localMaxArray[0])/1.773)*0.0393701)*100
+        dataArray = lpf_array
+        iteratorI = 0
+        while(iteratorI < 827):
+            if(iteratorJ > 20):
+                localMaxArray[0] = iteratorI - iteratorJ
+                break
+            else:
+                if(dataArray[iteratorI] >= localMaxArray[0]):
+                    localMaxArray[0] = dataArray[iteratorI]
+                    iteratorJ = 0
+                else:
+                    if(dataArray[iteratorI] > dataArray[iteratorI + 1]):
+                        iteratorJ = iteratorJ + 1
+            
+            iteratorI = iteratorI + 1
+        
+#        iteratorJ = 0
+#        while(iteratorJ < 40):
+#            if(dataArray[iteratorI] < dataArray[iteratorI + 1]):
+#                iteratorJ = iteratorJ + 1
+#            else:
+#                iteratorJ = 0
+#            iteratorI = iteratorI + 1
+#
+#        iteratorJ = 0
+#
+#        while(iteratorI < 827):
+#            if(iteratorJ > 20):
+#                localMaxArray[0] = iteratorI - iteratorJ
+#                break
+#            else:
+#                if(dataArray[iteratorI] >= localMaxArray[0]):
+#                    localMaxArray[0] = dataArray[iteratorI]
+#                    iteratorJ = 0
+#                else:
+#                    iteratorJ = iteratorJ + 1
+#        
+#            iteratorI = iteratorI + 1
+  
+      
+        while(dataArray[iteratorI] >= dataArray[iteratorI + 1]):
+            iteratorI = iteratorI + 1
+
+        iteratorJ = 0
+
+        while(iteratorI < 827):
+            if(iteratorJ > 20):
+                localMaxArray[1] = iteratorI - iteratorJ
+                break
+            else:
+                if(dataArray[iteratorI] >= localMaxArray[1]):
+                    localMaxArray[1] = dataArray[iteratorI]
+                    iteratorJ = 0
+                else:
+                    iteratorJ = iteratorJ + 1
+        
+            iteratorI = iteratorI + 1
+
+#print((((localMaxArray[1] - localMaxArray[0])/1.773)*0.0393701)*100)
+    print(localMaxArray[1]*0.0967)
+    print(localMaxArray[0]*0.0967)
+    return (((localMaxArray[1] - localMaxArray[0])/1.773)*0.03807) * 255
+#    modeOfArray = stats.mode(valuesArray).mode[0]
+#    print(modeOfArray)
+#    return modeOfArray
+
 
 def disconnect():
     client.disconnect()
