@@ -733,19 +733,19 @@ void onPacket(sbus_packet_t packet){
 	//-------------------------------------------------------------------
 	//drill power
 	
-	START_TIMER(drill_timer)
+	//START_TIMER(drill_timer)
 	
-	bool drill_on = packet.channels[SD_ON_CHANNEL] > FrSky_switch_threshold;
-	static bool drill_on_last_time = !drill_on;
+	//bool drill_on = packet.channels[SD_ON_CHANNEL] > FrSky_switch_threshold;
+	//static bool drill_on_last_time = !drill_on;
 	//if (drill_on && !drill_on_last_time){
-		pca->set_pwm(PWM_CHANNEL_DRILL, 0, max_PCA_val);
+		//pca->set_pwm(PWM_CHANNEL_DRILL, 0, max_PCA_val);
 	/*} else if (!drill_on && drill_on_last_time) {
 		pca->set_pwm(PWM_CHANNEL_DRILL, 0, 0);
 	}*/
 	
-	STOP_TIMER(drill_timer)
+	//STOP_TIMER(drill_timer)
 	//PRINT_TIMER(drill_timer)
-	RESET_TIMER(drill_timer)
+	//RESET_TIMER(drill_timer)
 
 	//-------------------------------------------------------------------
 	//radar call
@@ -1046,6 +1046,9 @@ int main(int argc, char* argv[]){
 		cleanup();
 		return err;
 	}
+	
+	//just turn on the drill unconditionally, will be controlled by direction pins
+	pca->set_pwm(PWM_CHANNEL_DRILL, 0, max_PCA_val);
 
 	//call this function when SIGINT is received (Ctrl+C, kind of a force quit)
 	std::signal(SIGINT, exitFxn);
