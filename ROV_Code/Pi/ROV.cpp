@@ -42,7 +42,7 @@
 //#define PRINT_PACKETS 1
 
 //uncomment to skip creating/writing to the log file
-#define SKIP_LOGGING 1
+//#define SKIP_LOGGING 1
 
 #include <chrono>
 using namespace std::chrono;
