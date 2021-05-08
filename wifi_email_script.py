@@ -51,7 +51,7 @@ def send_email():
     print("date and time: ",date_time)	
 
     fromaddr = "p21321rov@gmail.com"
-    toaddr = "jimbosned@gmail.com"
+    toaddr = "w.evans13@gmail.com"
 
     msg = MIMEMultipart()
     msg['From'] = fromaddr
